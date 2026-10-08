@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>POWER GAP AIOps</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<script src="/vendor/three.min.js"></script>
+<style>
+  /* 팔레트: Exocarp #788417 · Unripe #AAB026 · Mystic Melon #F6F1BC · Cantaloupe #FDCB7B · Kumquat #EEA64B · Orange Zest #D9641F */
+  :root {
+    --olive: #788417; --green: #AAB026; --cream: #F6F1BC; --cantaloupe: #FDCB7B; --kumquat: #EEA64B; --orange: #D9641F;
+    --bg: #F7F6EC; --card: #FFFFFF; --line: #E9E7D6; --line-2: #F1EFE2;
+    --text: #22261A; --text-2: #5C6350; --muted: #8E9482; --faint: #B7BCAA;
+    --sans: Pretendard, "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "SFMono-Regular", Menlo, Consolas, monospace;
+    --r: 18px; --shadow: 0 1px 2px rgba(34,38,26,.04), 0 12px 32px rgba(34,38,26,.06);
+    --rail: 76px; --H: clamp(300px, 38vh, 420px);
+  }
+  html[data-theme="dark"] {
+    --bg: #14161A; --card: #1C1F24; --line: #2B2F36; --line-2: #24282E; --text: #ECEDE4; --text-2: #BDC1B4; --muted: #8F948A; --faint: #5F645C;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 12px 32px rgba(0,0,0,.35);
+  }
+  html[data-theme="dark"] .rail, html[data-theme="dark"] th { background: var(--card); }
+  html[data-theme="dark"] .topbar { background: rgba(20,22,26,.85); }
+  html[data-theme="dark"] .chip { background: rgba(170,176,38,.16); color: #CFD86A; }
+  html[data-theme="dark"] .chip.ok, html[data-theme="dark"] .badge.ok, html[data-theme="dark"] .stp.ok, html[data-theme="dark"] .alert.ok .ic { background: rgba(170,176,38,.18); color: #CFD86A; border-color: rgba(170,176,38,.35); }
+  html[data-theme="dark"] .chip.warn, html[data-theme="dark"] .badge.warn, html[data-theme="dark"] .stp.warn, html[data-theme="dark"] .alert.warn .ic { background: rgba(238,166,75,.18); color: #F3C27A; border-color: rgba(238,166,75,.35); }
+  html[data-theme="dark"] .chip.err, html[data-theme="dark"] .badge.err, html[data-theme="dark"] .stp.err, html[data-theme="dark"] .alert.err .ic { background: rgba(217,100,31,.2); color: #F39A66; border-color: rgba(217,100,31,.4); }
+  html[data-theme="dark"] .chip.ghost, html[data-theme="dark"] .alert.info .ic, html[data-theme="dark"] .stp, html[data-theme="dark"] .seg, html[data-theme="dark"] .btn.s, html[data-theme="dark"] .rb.active, html[data-theme="dark"] .nav-btn.active, html[data-theme="dark"] .ico-card .ico.g { background: var(--line-2); color: var(--text-2); }
+  html[data-theme="dark"] .rb.active { color: #CFD86A; }
+  html[data-theme="dark"] .badge { background: var(--card); border-color: var(--line); }
+  html[data-theme="dark"] .tile, html[data-theme="dark"] .drop { background: #202329; border-color: var(--line); }
+  html[data-theme="dark"] .tile .l { color: #CFD86A; }
+  html[data-theme="dark"] .island { background: radial-gradient(ellipse at 50% 60%, #262A31 0%, #1C1F24 60%, #181A1F 100%); }
+  html[data-theme="dark"] .lbl3, html[data-theme="dark"] .island .lbl3 { background: var(--card); color: var(--text); }
+  html[data-theme="dark"] .bars i { background: rgba(246,241,188,.22); } html[data-theme="dark"] .bars i.hi { background: var(--kumquat); }
+  html[data-theme="dark"] .mono { background: #0F1114; }
+  html[data-theme="dark"] input[type="date"], html[data-theme="dark"] .pipe-card:hover { background: var(--card); color: var(--text); }
+  html[data-theme="dark"] .neg { color: #F39A66; } html[data-theme="dark"] .pos { color: #CFD86A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: clamp(14.5px, 1.05vw, 17px); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  /* ---- 아이콘 레일 ---- */
+  .rail { position: fixed; left: 0; top: 0; bottom: 0; width: var(--rail); background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 18px 0; gap: 8px; z-index: 20; }
+  .mark { width: 42px; height: 42px; border-radius: 14px; background: var(--olive); display: grid; place-items: center; margin-bottom: 14px; }
+  .rb { width: 46px; height: 46px; border: none; border-radius: 14px; background: none; color: var(--text-2); cursor: pointer; display: grid; place-items: center; font-size: 1.05rem; position: relative; }
+  .rb:hover { background: var(--line-2); } .rb.active { background: var(--cream); color: var(--olive); }
+  .rb .tip { position: absolute; left: 56px; top: 50%; transform: translateY(-50%); background: var(--text); color: #fff; font-size: 0.72rem; font-weight: 700; padding: 4px 9px; border-radius: 8px; white-space: nowrap; opacity: 0; pointer-events: none; transition: .12s; }
+  .rb:hover .tip { opacity: 1; }
+  .rail .bottom { margin-top: 8px; width: 46px; height: 46px; border-radius: 14px; background: var(--line-2); display: grid; place-items: center; font-size: 0.6rem; font-weight: 800; color: var(--text-2); text-align: center; line-height: 1.1; }
+  /* ---- 본문 ---- */
+  .main { margin-left: var(--rail); min-height: 100vh; }
+  .topbar { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(16px, 2.2vw, 32px); position: sticky; top: 0; z-index: 10; background: rgba(247,246,236,.85); backdrop-filter: blur(10px); }
+  .topbar h1 { margin: 0; font-size: 1.18rem; } .topbar .right { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: var(--text-2); flex-wrap: wrap; justify-content: flex-end; }
+  .page { padding: 10px clamp(16px, 2.2vw, 32px) 48px; }
+  .view { display: none; flex-direction: column; gap: 18px; } .view.active { display: flex; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; background: var(--cream); color: var(--olive); white-space: nowrap; }
+  .chip.warn { background: #FDE9C9; color: #9D5A0F; } .chip.err { background: #F9DDCB; color: var(--orange); } .chip.ok { background: #EEF1D4; color: var(--olive); } .chip.ghost { background: var(--line-2); color: var(--text-2); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: clamp(14px, 1.4vw, 22px) clamp(16px, 1.6vw, 24px); box-shadow: var(--shadow); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .card.fixed { height: var(--H); } .card.tall { height: 520px; }
+  .card h2 { margin: 0; font-size: 1.1rem; } .card .sub { margin: 3px 0 0; color: var(--muted); font-size: 0.86rem; }
+  .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; flex-shrink: 0; }
+  .scroll { flex: 1; min-height: 0; overflow: auto; border-radius: 12px; }
+  .scroll::-webkit-scrollbar { width: 8px; height: 8px; } .scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+  .link { font-size: 0.74rem; font-weight: 800; color: var(--orange); background: none; border: none; cursor: pointer; letter-spacing: .04em; font-family: inherit; }
+  /* ---- 대시보드 그리드: 끝단 정렬 ---- */
+  .dash { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 1.95fr) minmax(220px, 1fr); grid-template-rows: minmax(380px, auto) 330px auto; gap: 18px; align-items: stretch; }
+  .col-l { grid-column: 1; grid-row: 1; } .col-c { grid-column: 2; grid-row: 1; display: flex; } .col-r { grid-column: 3; grid-row: 1; display: flex; flex-direction: column; gap: 18px; }
+  .col-r .card:last-child { flex: 1; }
+  .row2 { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: 0.75fr 2.1fr 0.75fr 1.15fr; gap: 18px; min-height: 0; }
+  .row2 .card { height: 100%; }
+  .pipe-card { grid-column: 1 / -1; grid-row: 3; cursor: pointer; transition: .15s; }
+  .pipe-card:hover { border-color: var(--kumquat); box-shadow: 0 14px 36px rgba(217,100,31,.12); transform: translateY(-1px); }
+  @media (max-width: 1180px) { .dash { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto auto; } .col-c { grid-column: 1 / -1; grid-row: 1; } .col-l { grid-column: 1; grid-row: 2; } .col-r { grid-column: 2; grid-row: 2; } .row2 { grid-row: 3; grid-template-columns: 1fr 1fr; grid-auto-rows: 330px; } .pipe-card { grid-row: 4; } }
+  @media (max-width: 760px) { .dash { grid-template-columns: 1fr; } .col-l, .col-r, .row2, .pipe-card { grid-column: 1; } .col-l { grid-row: 2; } .col-r { grid-row: 3; } .row2 { grid-row: 4; grid-template-columns: 1fr; } .pipe-card { grid-row: 5; } :root { --rail: 56px; } .rb { width: 40px; height: 40px; } }
+  /* ---- 좌측 헤드라인 ---- */
+  .headline .label { font-size: 1rem; color: var(--muted); font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .headline .hint { font-size: 0.95rem; line-height: 1.5; } .headline .act h3 { font-size: 1.02rem; } .headline .arow { font-size: 1rem; padding: 9px 0; } .headline .arow .p { font-size: 0.86rem; }
+  .huge { font-size: clamp(2.4rem, 4vw, 3.8rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1; margin: 6px 0 2px; }
+  .huge small { font-size: 0.42em; font-weight: 700; color: var(--text-2); margin-left: 6px; letter-spacing: 0; }
+  .act { margin-top: 18px; } .act h3 { margin: 0 0 8px; font-size: 0.86rem; }
+  .act .stack { height: 6px; border-radius: 6px; display: flex; overflow: hidden; gap: 2px; margin-bottom: 10px; } .act .stack i { display: block; height: 100%; }
+  .arow { display: grid; grid-template-columns: 10px 1fr auto auto; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line-2); font-size: 0.84rem; }
+  .arow:last-child { border-bottom: none; } .arow .sw { width: 10px; height: 10px; border-radius: 3px; } .arow .v { font-weight: 800; font-variant-numeric: tabular-nums; } .arow .p { color: var(--muted); font-size: 0.76rem; min-width: 34px; text-align: right; }
+  /* ---- 미니 카드 ---- */
+  .mini .t { font-size: 0.86rem; color: var(--muted); font-weight: 700; } .mini .v { font-size: 1.5rem; font-weight: 800; margin: 2px 0 6px; letter-spacing: -0.02em; } .mini .v small { font-size: .7rem; margin-left: 6px; color: var(--olive); }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 54px; margin-top: 4px; } .bars i { flex: 1; border-radius: 3px 3px 0 0; background: var(--cream); min-height: 3px; } .bars i.hi { background: var(--kumquat); } .bars i.o { background: var(--orange); } .bars i.g { background: var(--green); }
+  .mini .foot { font-size: 0.78rem; color: var(--muted); margin-top: 8px; flex-shrink: 0; }
+  .vwrap { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; border-radius: 8px; padding-bottom: 6px; }
+  .vwrap::-webkit-scrollbar { height: 8px; } .vwrap::-webkit-scrollbar-thumb { background: var(--line); border-radius: 8px; }
+  .vbars { display: flex; align-items: flex-end; gap: 4px; height: 100%; min-height: 70px; min-width: max-content; }
+  .vbars i { flex: 0 0 16px; border-radius: 4px 4px 0 0; background: var(--cream); min-height: 4px; } .vbars i.hi { background: var(--kumquat); }
+  html[data-theme="dark"] .vbars i { background: rgba(246,241,188,.22); } html[data-theme="dark"] .vbars i.hi { background: var(--kumquat); }
+  .trend { width: 100%; height: 70px; display: block; }
+  .donut { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; flex: 1; min-height: 0; } .donut svg { width: min(150px, 60%); height: auto; aspect-ratio: 1; flex-shrink: 0; } .donut .big { font-size: 1.3rem; font-weight: 800; }
+  /* ---- 우측 ---- */
+  .ico-card { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line-2); } .ico-card:last-child { border-bottom: none; }
+  .ico { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; }
+  .ico.o { background: var(--olive); } .ico.k { background: var(--kumquat); } .ico.z { background: var(--orange); } .ico.g { background: var(--green); }
+  .ico-card .k { font-size: 0.8rem; color: var(--muted); } .ico-card .v { font-weight: 800; font-size: 1.05rem; line-height: 1.25; }
+  .fc { padding: 5px 0; border-bottom: 1px solid var(--line-2); } .fc:last-child { border-bottom: none; } .fc .k { font-size: 0.8rem; color: var(--muted); } .fc .v { font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 8px; } .fc .d { font-size: 0.76rem; color: var(--muted); }
+  .alert { display: flex; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line-2); font-size: 0.86rem; } .alert:last-child { border-bottom: none; }
+  .alert .ic { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; flex-shrink: 0; font-size: 0.66rem; font-weight: 800; }
+  .alert.ok .ic { background: #EEF1D4; color: var(--olive); } .alert.warn .ic { background: #FDE9C9; color: #9D5A0F; } .alert.err .ic { background: #F9DDCB; color: var(--orange); } .alert.info .ic { background: var(--line-2); color: var(--text-2); }
+  .alert .m { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; } .alert .m small { display: block; color: var(--faint); font-size: 0.76rem; }
+  /* ---- 3D 섬 히어로 ---- */
+  .island { position: relative; flex: 1; min-height: 360px; border-radius: var(--r); background: radial-gradient(ellipse at 50% 60%, #FFFFFF 0%, #FBFAEF 55%, #F7F6EC 100%); border: 1px solid var(--line); overflow: hidden; user-select: none; box-shadow: var(--shadow); }
+  .island canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; cursor: grab; }
+  .island canvas.drag { cursor: grabbing; }
+  .island .hd { position: absolute; left: 20px; top: 16px; right: 16px; z-index: 4; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; z-index: 3; pointer-events: none; flex-wrap: wrap; }
+  .island .hd b { font-size: 1.15rem; } .island .hd .badges { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-size: 0.9rem; font-weight: 800; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .badge.err { background: #FBE7DA; color: var(--orange); border-color: #F3C9AE; } .badge.ok { background: #EEF1D4; color: var(--olive); border-color: #D9E0A8; } .badge.warn { background: #FDE9C9; color: #9D5A0F; }
+  .badge .dim { font-weight: 600; color: var(--text-2); }
+  .island .lbl3 { position: absolute; transform: translate(-50%, -130%); background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 5px 11px; font-size: 0.8rem; font-weight: 800; white-space: nowrap; box-shadow: var(--shadow); pointer-events: none; display: none; z-index: 2; }
+  .island .lbl3 small { display: block; font-weight: 600; color: var(--muted); font-size: 0.7rem; }
+  .island .peak { position: absolute; transform: translate(-50%, -115%); display: none; z-index: 2; background: #E0432E; color: #fff; font-weight: 800; font-size: 0.86rem; padding: 9px 14px; border-radius: 12px; box-shadow: 0 10px 28px rgba(224,67,46,.35); white-space: nowrap; pointer-events: none; animation: shake 2.4s ease-in-out infinite; }
+  .island .peak small { display: block; font-weight: 600; font-size: 0.74rem; opacity: .9; }
+  .island .peak::after { content: ""; position: absolute; left: 50%; bottom: -7px; width: 14px; height: 14px; background: #E0432E; transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
+  @keyframes shake { 0%, 100% { transform: translate(-50%, -115%); } 50% { transform: translate(-50%, -125%); } }
+  .island.drift { box-shadow: 0 0 0 2px rgba(224,67,46,.35), var(--shadow); }
+  .island .note { position: absolute; right: 16px; bottom: 12px; font-size: 0.78rem; color: var(--muted); z-index: 3; }
+  /* ---- 2D 막대 ---- */
+  .chart { width: 100%; height: 100%; display: block; flex: 1; min-height: 120px; }
+  .ctip { position: absolute; display: none; background: var(--text); color: #fff; font-size: 0.76rem; font-weight: 700; padding: 6px 10px; border-radius: 9px; pointer-events: none; white-space: nowrap; transform: translate(-50%, -120%); z-index: 3; }
+  html[data-theme="dark"] .ctip { background: #000; }
+  .legend2 { display: flex; gap: 14px; font-size: 0.8rem; color: var(--text-2); margin-top: 6px; } .legend2 i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+  /* ---- 파이프라인 띠 ---- */
+  .strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 1000px) { .strip { grid-template-columns: repeat(4, minmax(0, 1fr)); } } @media (max-width: 600px) { .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stp { background: var(--line-2); border-radius: 12px; padding: 10px 12px 9px; min-width: 0; }
+  .stp .n { font-size: 0.7rem; font-weight: 800; color: var(--faint); letter-spacing: .08em; } .stp .t { font-weight: 800; font-size: 0.92rem; margin-top: 2px; word-break: keep-all; } .stp .s { font-size: 0.76rem; color: var(--muted); word-break: keep-all; } .stp .st { margin-top: 6px; font-size: 0.8rem; font-weight: 800; color: var(--faint); }
+  .stp.ok { background: #EEF1D4; } .stp.ok .n, .stp.ok .st { color: var(--olive); } .stp.warn { background: #FDE9C9; } .stp.warn .n, .stp.warn .st { color: #9D5A0F; } .stp.err { background: #F9DDCB; } .stp.err .n, .stp.err .st { color: var(--orange); }
+  /* ---- 표/컨트롤 (다른 뷰) ---- */
+  .grid { display: grid; gap: 18px; } .g-2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th { position: sticky; top: 0; background: #fff; text-align: left; color: var(--muted); font-weight: 600; font-size: 0.78rem; padding: 8px 12px; border-bottom: 1px solid var(--line); z-index: 1; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--line-2); vertical-align: middle; } tr:last-child td { border-bottom: none; }
+  .empty { color: var(--faint); text-align: center; padding: 26px 0; font-size: 0.82rem; } .num { font-variant-numeric: tabular-nums; } .neg { color: var(--orange); font-weight: 700; } .pos { color: var(--olive); font-weight: 700; }
+  .kv { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line-2); font-size: 0.92rem; gap: 12px; } .kv:last-of-type { border-bottom: none; } .kv .k { color: var(--text-2); } .kv .vv { font-weight: 700; text-align: right; }
+  .btn { border: none; border-radius: 11px; padding: 10px 16px; font: inherit; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+  .btn.p { background: var(--orange); color: #fff; } .btn.s { background: var(--line-2); color: var(--text); } .btn.o { background: #fff; color: var(--orange); border: 1.5px solid var(--orange); } .btn.g { background: var(--olive); color: #fff; }
+  .ctl { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; flex-shrink: 0; }
+  input[type="date"] { font: inherit; font-size: 0.84rem; border: 1.5px solid var(--line); border-radius: 11px; padding: 8px 12px; background: #fff; color: var(--text); }
+  label.f { display: inline-flex; flex-direction: column; gap: 4px; font-size: 0.72rem; color: var(--muted); font-weight: 600; }
+  .drop { border: 1.5px dashed var(--line); border-radius: 14px; padding: 16px 18px; background: #FFFDF4; } .drop h3 { margin: 0 0 4px; font-size: 1rem; } .drop p { margin: 0 0 10px; color: var(--muted); font-size: 0.84rem; }
+  input[type="file"] { font-size: 0.78rem; color: var(--text-2); max-width: 100%; }
+  .mono { font-family: var(--mono); font-size: 0.74rem; background: #26291D; color: #F6F1BC; border-radius: 12px; padding: 12px 14px; white-space: pre-wrap; word-break: break-word; overflow: auto; display: none; margin-top: 12px; flex-shrink: 0; max-height: 220px; }
+  .mono.show { display: block; } .mono.fill { display: block; flex: 1; min-height: 0; max-height: none; margin-top: 0; }
+  .stat3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 14px; flex-shrink: 0; }
+  .tile { background: #FFFDF0; border: 1px solid #F1EBC4; border-radius: 14px; padding: 12px 16px; } .tile .l { font-size: 0.76rem; color: var(--olive); font-weight: 800; letter-spacing: .04em; } .tile .v { font-size: 1.5rem; font-weight: 800; margin-top: 2px; } .tile .d { font-size: 0.78rem; color: var(--muted); }
+  .hint { font-size: 0.82rem; color: var(--muted); } code { font-family: var(--mono); background: var(--line-2); padding: 1px 6px; border-radius: 5px; font-size: 0.8em; }
+</style>
+</head>
+<body>
+
+<nav class="rail">
+  <div class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>
+  <button class="rb active" data-view="dashboard" onclick="go('dashboard')">◫<span class="tip">Dashboard</span></button>
+  <button class="rb" data-view="simulation" onclick="go('simulation')">▶<span class="tip">Simulation</span></button>
+  <button class="rb" data-view="datasets" onclick="go('datasets')">▤<span class="tip">Datasets</span></button>
+  <button class="rb" data-view="system" onclick="go('system')">⚙<span class="tip">System</span></button>
+  <button class="rb" id="theme-btn" onclick="toggleTheme()" style="margin-top:auto;">☾<span class="tip">다크 모드</span></button>
+  <div class="bottom" id="src-chip">mlflow</div>
+</nav>
+
+<div class="main">
+  <div class="topbar"><h1 id="page-title">POWER GAP AIOps · 제주 전력수요예측 오차 사전경보</h1><div class="right"><span id="clock"></span><span class="chip ok" id="model-health"><span class="dot"></span>확인 중</span></div></div>
+  <div class="page">
+
+  <!-- ================= DASHBOARD ================= -->
+  <section class="view active" id="view-dashboard">
+    <div class="dash">
+      <div class="card col-l headline">
+        <div class="label">드리프트 점수 <button class="link" onclick="go('simulation')">DETAIL ›</button></div>
+        <div class="huge" id="k-drift">미실행</div>
+        <div class="hint" id="k-drift-d">Simulation에서 재생하면 롤링 RMSE ÷ 임계값이 표시됩니다</div>
+        <div class="hint" id="k-drift-aux"></div>
+        <div class="act">
+          <h3>운영 지표 <span class="hint" id="k-win">최근 5분</span></h3>
+          <div class="stack" id="act-stack"></div>
+          <div id="act-rows"></div>
+        </div>
+        <div class="ctl" style="margin-top:14px;">
+          <div class="chip ghost" style="gap:2px;padding:3px;">
+            <button class="link" style="color:var(--olive)" onclick="setWindow(300,this)">5분</button><button class="link" style="color:var(--muted)" onclick="setWindow(3600,this)">1시간</button><button class="link" style="color:var(--muted)" onclick="setWindow(21600,this)">6시간</button><button class="link" style="color:var(--muted)" onclick="setWindow(86400,this)">24시간</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-c">
+        <div class="island" id="island">
+          <canvas id="island-canvas"></canvas>
+          <div class="hd"><b>제주 전력 모니터링</b><div class="badges"><span class="badge err" id="b-next">▼ <span class="dim">내일 예상 갭</span> –</span><span class="badge ok" id="b-drift">〜 <span class="dim">드리프트</span> 미실행</span></div></div>
+          <div class="lbl3" id="island-label"></div>
+          <div class="peak" id="peak-label"></div>
+          <div class="note">ⓘ 개념 시각화 · 설비 위치는 실제와 다를 수 있음 · 드래그로 돌리기</div>
+        </div>
+      </div>
+
+      <aside class="col-r">
+        <div class="card">
+          <div class="head" style="margin-bottom:4px;"><h2>현재 운영 모델</h2><button class="link" onclick="go('system')">SEE ALL ›</button></div>
+          <div class="ico-card"><div class="ico o" id="m-ico">v–</div><div><div class="k">champion</div><div class="v" id="m-ver">JejuGapPredictor</div></div></div>
+          <div class="ico-card"><div class="ico k">FT</div><div><div class="k">학습 방식 · 등록 시 RMSE</div><div class="v" id="m-mode">–</div></div></div>
+          <div class="ico-card"><div class="ico g">N</div><div><div class="k">입력 길이 · 등록 시각</div><div class="v" id="m-time">–</div></div></div>
+        </div>
+        <div class="card">
+          <div class="head" style="margin-bottom:4px;"><h2>검증 성능</h2><span class="hint">2025 상반기 walk-forward</span></div>
+          <div class="fc"><div class="k">LSTM RMSE</div><div class="v"><span id="f-lstm">–</span><span class="chip ok" id="f-delta">–</span></div><div class="d" id="f-lstm-d">naive(KPX 예측 그대로) 대비</div></div>
+          <div class="fc"><div class="k">방향 적중률</div><div class="v"><span id="f-dir">–</span></div><div class="d">과소/과대 방향</div></div>
+          <div class="fc"><div class="k">보조 지표 · MAE / WAPE / Bias</div><div class="v" style="font-size:1rem;"><span id="f-aux">–</span></div><div class="d" id="f-aux-d">WAPE = KPX 오차 중 남은 비율(naive 1.00) · Bias = 치우침(+과대 쪽)</div></div>
+          <div class="fc"><div class="k">드리프트 임계값</div><div class="v"><span id="f-th">–</span></div><div class="d">2024 롤링 RMSE 95분위 · 특수일 제외</div></div>
+        </div>
+      </aside>
+
+      <div class="row2">
+        <div class="card mini"><div class="t">재학습 이력 · 버전별 등록 시 RMSE</div><div class="v" id="mi-ver" style="font-size:1.3rem;margin:2px 0 8px;">–</div><div class="vwrap"><div class="vbars" id="mi-bars"></div></div><div class="foot">MLflow Registry · 마지막 막대가 champion · 많아지면 좌우 스크롤</div></div>
+        <div class="card mini"><div class="t">최근 30일 갭 · 내일 예측 <span class="hint" id="ch-range"></span></div><div style="position:relative;flex:1;min-height:0;display:flex;"><svg class="chart" id="chart"></svg><div class="ctip" id="chart-tip"></div></div><div class="legend2"><span><i style="background:#AAB026"></i>과대예측</span><span><i style="background:#D9641F"></i>과소예측</span><span><i style="background:#fff;border:1.5px dashed #D9641F"></i>내일 예측</span><span id="ch-note"></span></div></div>
+        <div class="card mini"><div class="t">임계값 대비 · 누적</div><div class="donut"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="32" fill="none" stroke="var(--line-2)" stroke-width="9"/><circle id="mi-donut" cx="40" cy="40" r="32" fill="none" stroke="#AAB026" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 201" transform="rotate(-90 40 40)"/><text x="40" y="45" text-anchor="middle" font-size="15" font-weight="800" fill="var(--text)" id="mi-donut-t">–</text></svg><div><div class="big" id="mi-streak">0일</div><div class="foot" id="mi-streak-f">임계값 초과 연속 일수</div></div></div></div>
+        <div class="card"><div class="head" style="margin-bottom:6px;"><h2>최근 알람</h2><span class="hint">aiops.log</span></div><div class="scroll" id="alerts"><div class="empty">아직 알람이 없습니다</div></div></div>
+      </div>
+
+      <div class="card pipe-card" onclick="go('simulation')" title="클릭하면 Simulation으로 이동">
+        <div class="head" style="margin-bottom:10px;"><div><h2>드리프트 감지 기반 재학습 파이프라인</h2><p class="sub">마지막 재생이 거쳐간 단계 · 클릭하면 재생 화면으로 이동</p></div><span class="chip ghost" id="pipe-badge">아직 실행 안 함</span></div>
+        <div class="strip" id="pipe"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SIMULATION ================= -->
+  <section class="view" id="view-simulation">
+    <div class="card">
+      <div class="head"><div><h2>실적 수신 재생 → 드리프트 감시</h2><p class="sub">직전 N일로 예측 → 실적 연결 → 롤링 21건 RMSE(특수일 제외) → 임계값 초과 누적 → 연속 2회부터 재학습 선언 → 게이트 → 승격. 재학습 후 14일 쿨다운.</p></div></div>
+      <div class="ctl">
+        <label class="f">시작<input type="date" id="replay-start" value="2025-09-01" /></label>
+        <label class="f">종료<input type="date" id="replay-end" value="2025-10-31" /></label>
+        <button class="btn p" onclick="replay('real')">실제 이력 재생</button>
+        <button class="btn o" onclick="replay('synthetic')">합성 시나리오 (−60 MW)</button>
+        <button class="btn s" onclick="resetState()">운영 상태 초기화</button>
+        <span class="hint" id="replay-status"></span>
+      </div>
+      <div class="stat3" id="replay-stats" style="display:none;">
+        <div class="tile"><div class="l">ROLLING RMSE</div><div class="v" id="st-rmse">–</div><div class="d" id="st-rmse-d"></div></div>
+        <div class="tile"><div class="l">임계값 초과 누적</div><div class="v" id="st-streak">–</div><div class="d" id="st-streak-d"></div></div>
+        <div class="tile"><div class="l">재학습 / 승격</div><div class="v" id="st-re">–</div><div class="d">이번 재생 구간</div></div>
+      </div>
+    </div>
+    <div class="grid g-2">
+      <div class="card fixed"><div class="head"><h2>날짜별 예측 · 실제</h2></div><div class="scroll"><table><thead><tr><th>날짜</th><th>예측 갭</th><th>실제 갭</th><th>방향</th><th>모델</th></tr></thead><tbody id="rp-body"><tr><td colspan="5" class="empty">재생 결과가 여기에 표시됩니다</td></tr></tbody></table></div></div>
+      <div class="card fixed"><div class="head"><h2>경보 · 재학습 이벤트</h2></div><div class="scroll"><table><thead><tr><th>날짜</th><th>상태</th><th>누적</th><th>RMSE (제외/포함)</th><th>임계값</th></tr></thead><tbody id="ev-body"><tr><td colspan="5" class="empty">임계값 초과 없음</td></tr></tbody></table></div></div>
+    </div>
+    <div class="grid g-2">
+      <div class="card"><div class="head"><div><h2>단건 예측</h2><p class="sub"><code>POST /predict</code> · 목표일 직전 N일 입력</p></div></div>
+        <div class="ctl"><label class="f">목표일<input type="date" id="predict-date" value="2025-10-03" /></label><button class="btn g" onclick="predictOne()">예측 요청</button><span class="hint" id="predict-status"></span></div>
+        <div class="mono" id="predict-raw"></div></div>
+      <div class="card"><div class="head"><div><h2>재생 응답 원문</h2><p class="sub">drift_check · events · retrains</p></div></div><div class="mono" id="replay-raw"></div></div>
+    </div>
+  </section>
+
+  <!-- ================= DATASETS ================= -->
+  <section class="view" id="view-datasets">
+    <div class="card">
+      <div class="head"><div><h2>데이터 등록</h2><p class="sub">KPX 하루전 수요예측(제주)과 전력거래소 시간별 제주 실적 → 18~21시 평균 갭(예측 − 실적, MW). 학습·재생·재학습은 가장 최근 등록 파일을 씁니다.</p></div><div class="hint" id="data-status">업로드된 데이터 없음</div></div>
+      <div class="grid g-2">
+        <div class="drop"><h3>원본 파일 업로드 (권장)</h3><p>KPX 엑셀 <code>pssJeju_YYYY.xlsx</code>와 실적 CSV <code>…제주전력수요_YYYYMMDD.csv</code>를 함께 선택. 서버가 인코딩·쉼표·중복·누락을 정리해 기존 원본과 합쳐 등록합니다.</p>
+          <input type="file" id="raw-input" accept=".xlsx,.csv" multiple /><div class="ctl" style="margin-top:10px;"><button class="btn p" onclick="uploadRaw()">원본 업로드 → 전처리</button><span class="hint" id="raw-status"></span></div></div>
+        <div class="drop"><h3>정규화 CSV 업로드</h3><p>이미 전처리된 <code>Date,GapMW,ForecastMW</code> 파일(<code>data/jeju_gap.csv</code>)을 그대로 등록합니다.</p>
+          <input type="file" id="upload-input" accept=".csv" /><div class="ctl" style="margin-top:10px;"><button class="btn s" onclick="uploadFile()">정규화 CSV 업로드</button><span class="hint" id="upload-status"></span></div></div>
+      </div>
+      <div class="mono" id="raw-report"></div>
+    </div>
+    <div class="grid g-2">
+      <div class="card fixed"><div class="head"><div><h2>원본 파일 (data/raw)</h2><p class="sub">어댑터는 제주 예측·실적만 사용</p></div></div><div class="scroll"><table><thead><tr><th>파일</th><th>종류</th><th>크기</th></tr></thead><tbody id="raw-body"><tr><td colspan="3" class="empty">–</td></tr></tbody></table></div></div>
+      <div class="card fixed"><div class="head"><div><h2>등록 이력 (data/uploads)</h2><p class="sub">가장 위가 현재 사용 중</p></div></div><div class="scroll"><table><thead><tr><th>파일</th><th>등록 시각</th><th>크기</th></tr></thead><tbody id="up-body"><tr><td colspan="3" class="empty">–</td></tr></tbody></table></div></div>
+    </div>
+    <div class="card fixed"><div class="head"><div><h2>품질 보고서</h2><p class="sub"><code>data/quality_report.md</code></p></div><button class="btn s" onclick="loadQuality()">새로고침</button></div><div class="mono fill" id="quality">–</div></div>
+  </section>
+
+  <!-- ================= SYSTEM ================= -->
+  <section class="view" id="view-system">
+    <div class="grid g-2">
+      <div class="card fixed"><div class="head"><h2>서버 상태</h2></div><div class="scroll" id="sys-kv"></div></div>
+      <div class="card fixed"><div class="head"><div><h2>임계값 (thresholds.json)</h2><p class="sub">학습 시 2024년 분포로 정한 값</p></div></div><div class="scroll" id="th-kv"></div></div>
+    </div>
+    <div class="card fixed"><div class="head"><div><h2>재학습 이력</h2><p class="sub">MLflow Model Registry · JejuGapPredictor</p></div><button class="btn s" onclick="loadVersions()">새로고침</button></div><div class="scroll"><table><thead><tr><th>버전</th><th>등록 시각</th><th>모드</th><th>등록 시 RMSE</th><th>게이트</th><th>상태</th></tr></thead><tbody id="ver-body"><tr><td colspan="6" class="empty">불러오는 중…</td></tr></tbody></table></div></div>
+    <div class="card tall"><div class="head"><div><h2>재학습 로그 파일</h2><p class="sub"><code>logs/aiops.log</code> 원문</p></div><div class="ctl" id="log-files"></div></div><div class="mono fill" id="log-content">파일을 선택하세요</div></div>
+  </section>
+
+  </div>
+</div>
+
+<script>
+let SEQ_LEN = 3, WINDOW = 300, lastReplay = null;
+const $ = (id) => document.getElementById(id);
+async function getJSON(p) { const r = await fetch(p); const d = await r.json().catch(() => null); return { ok: r.ok, status: r.status, data: d }; }
+async function safeJson(r) { const t = await r.text(); try { return JSON.parse(t); } catch (e) { return { __raw: t || "(응답 없음)" }; } }
+const fmt = (x, d = 1) => (x === null || x === undefined || Number.isNaN(x)) ? "–" : Number(x).toFixed(d);
+const chip = (l, t) => `<span class="chip ${l}"><span class="dot"></span>${t}</span>`;
+const dirLabel = (d) => d === "under" ? "과소예측 위험" : d === "over" ? "과대예측" : "중립";
+const isoPlus = (iso, n) => { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const tsFmt = (ts) => ts ? new Date(ts * 1000).toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : "–";
+const ago = (ts) => { const s = Math.max(0, Date.now() / 1000 - ts); return s < 60 ? `${Math.floor(s)}초 전` : s < 3600 ? `${Math.floor(s / 60)}분 전` : s < 86400 ? `${Math.floor(s / 3600)}시간 전` : `${Math.floor(s / 86400)}일 전`; };
+function show(el, obj, err = false) { el.classList.add("show"); el.style.outline = err ? "2px solid var(--orange)" : "none"; el.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2); }
+function applyTheme(t) { document.documentElement.dataset.theme = t; const b = $("theme-btn"); if (b) b.innerHTML = (t === "dark" ? "☀" : "☾") + `<span class="tip">${t === "dark" ? "라이트 모드" : "다크 모드"}</span>`; try { localStorage.setItem("theme", t); } catch (e) {} }
+function toggleTheme() { applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"); }
+(function () { let t = "light"; try { const q = new URLSearchParams(location.search).get("theme"); t = (q === "light" || q === "dark") ? q : (localStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")); } catch (e) {} applyTheme(t); })();
+const TITLES = { dashboard: "POWER GAP AIOps · 제주 전력수요예측 오차 사전경보", simulation: "Simulation · 실적 수신 재생과 드리프트 감시", datasets: "Datasets · 데이터 등록", system: "System · 서버 상태" };
+function go(v) { document.querySelectorAll(".view").forEach((e) => e.classList.toggle("active", e.id === "view-" + v)); document.querySelectorAll(".rb").forEach((t) => t.classList.toggle("active", t.dataset.view === v)); $("page-title").textContent = TITLES[v]; window.scrollTo({ top: 0, behavior: "smooth" }); if (v === "datasets") loadDatasets(); if (v === "system") loadSystem(); }
+setInterval(() => { $("clock").textContent = new Date().toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit", second: "2-digit" }); }, 1000);
+
+/* ---------- dashboard ---------- */
+const WLAB = { 300: "최근 5분", 3600: "최근 1시간", 21600: "최근 6시간", 86400: "최근 24시간" };
+function setWindow(w, btn) { WINDOW = w; btn.parentElement.querySelectorAll("button").forEach((b) => b.style.color = b === btn ? "var(--olive)" : "var(--muted)"); loadMetrics(); }
+async function loadMetrics() {
+  const { ok, data } = await getJSON(`/metrics/summary?window=${WINDOW}`); if (!ok || !data) return;
+  $("k-win").textContent = WLAB[WINDOW];
+  const rv = data.rmse_by_version, lastR = rv.length ? rv[rv.length - 1].rmse : null;
+  const rows = [["요청 수", data.requests.toLocaleString(), Math.min(100, data.requests), "#D9641F"],
+                ["평균 응답시간", `${fmt(data.avg_latency_ms, 0)} ms`, Math.min(100, data.avg_latency_ms / 10), "#EEA64B"],
+                ["성공률", data.success_rate == null ? "–" : (data.success_rate * 100).toFixed(1) + "%", data.success_rate == null ? 0 : data.success_rate * 100, "#AAB026"],
+                ["등록 시 RMSE", lastR == null ? "–" : `${fmt(lastR)} MW`, lastR == null ? 0 : Math.min(100, lastR), "#788417"]];
+  $("act-stack").innerHTML = rows.map((r) => `<i style="width:${Math.max(4, r[2] / 4)}%;background:${r[3]}"></i>`).join("");
+  $("act-rows").innerHTML = rows.map((r) => `<div class="arow"><span class="sw" style="background:${r[3]}"></span><span>${r[0]}</span><span class="v">${r[1]}</span><span class="p">${Math.round(r[2])}%</span></div>`).join("");
+  // 미니: 버전 막대
+  if (rv.length) { const mx = Math.max(...rv.map((x) => x.rmse)); $("mi-ver").innerHTML = `v${rv[rv.length - 1].version}<small>${rv.length}개 버전</small>`; $("mi-bars").innerHTML = rv.map((x, i) => `<i class="${i === rv.length - 1 ? "hi" : ""}" style="height:${Math.max(8, x.rmse / mx * 100)}%" title="v${x.version} ${fmt(x.rmse)} MW"></i>`).join(""); const vw = $("mi-bars").parentElement; vw.scrollLeft = vw.scrollWidth; }
+  // 드리프트
+  const d = data.drift;
+  if (d && d.ready) { const r = d.ratio; $("k-drift").innerHTML = `${fmt(r, 2)}<small>${r > 1 ? "드리프트" : "정상"}</small>`; $("k-drift").style.color = r > 1 ? "var(--orange)" : "var(--olive)"; $("k-drift-d").textContent = `롤링 RMSE ${fmt(d.rolling_rmse_mw)} / 임계값 ${fmt(d.threshold_mw)} MW · 기준일 ${d.as_of}`;
+    $("k-drift-aux").textContent = d.rolling_wape != null ? `보조 · MAE ${fmt(d.rolling_mae_mw)} MW · WAPE ${fmt(d.rolling_wape, 2)} · Bias ${d.rolling_bias_mw > 0 ? "+" : ""}${fmt(d.rolling_bias_mw)} MW (${d.rolling_bias_mw > 0 ? "과대 쪽" : "과소 쪽"} 치우침)` : "";
+    const pct = Math.min(1, r) * 201; $("mi-donut").setAttribute("stroke-dasharray", `${pct} 201`); $("mi-donut").setAttribute("stroke", r > 1 ? "#D9641F" : "#AAB026"); $("mi-donut-t").textContent = `${Math.round(r * 100)}%`;
+    $("mi-streak").textContent = `${d.breach_streak_days || 0}일`; $("mi-streak-f").textContent = d.breach_streak_days ? `${d.breach_streak_start}부터 연속 초과` : "임계값 초과 연속 일수";
+    const bd = $("b-drift"); bd.className = "badge " + (r > 1 ? "err" : "ok"); bd.innerHTML = `〜 <span class="dim">드리프트</span> ${fmt(r, 2)} ${r > 1 ? "감지" : "정상"}${d.breach_streak_days ? ` · 누적 ${d.breach_streak_days}일` : ""}`;
+    ALERT.drift = r > 1; ALERT.driftMsg = `⚠ 드리프트 감지 · 롤링 RMSE ${fmt(d.rolling_rmse_mw)} MW > 임계값 ${fmt(d.threshold_mw)} MW<small>기준일 ${d.as_of}${d.breach_streak_days ? ` · 임계값 초과 누적 ${d.breach_streak_days}일째` : ""}</small>`; syncAlert(); }
+  else { $("k-drift").textContent = "미실행"; $("k-drift").style.color = ""; $("k-drift-aux").textContent = ""; $("mi-donut").setAttribute("stroke-dasharray", "0 201"); $("mi-donut-t").textContent = "–"; $("mi-streak").textContent = "0일"; const bd = $("b-drift"); bd.className = "badge ok"; bd.innerHTML = `〜 <span class="dim">드리프트</span> 미실행`; ALERT.drift = false; syncAlert(); }
+}
+async function loadModel() {
+  const { ok, data } = await getJSON("/models/current"); const h = await getJSON("/health");
+  let n = SEQ_LEN; if (h.ok && h.data) { SEQ_LEN = n = h.data.seq_len || SEQ_LEN; $("src-chip").textContent = h.data.model_source; $("src-chip").title = `MODEL_SOURCE=${h.data.model_source} · ${h.data.loading_mode}`; }
+  if (!ok || !data) return;
+  const c = data.champion;
+  $("model-health").className = "chip " + (c ? "ok" : "warn"); $("model-health").innerHTML = `<span class="dot"></span>${c ? `Healthy · v${c.version}` : "champion 없음"}`;
+  $("m-ico").textContent = c ? `v${c.version}` : "v–"; $("m-ver").textContent = c ? `JejuGapPredictor v${c.version}${data.loaded ? " · 로드됨" : ""}` : (data.loaded_version || "–");
+  $("m-mode").textContent = c ? `${c.mode} · ${c.rmse != null ? fmt(c.rmse) + " MW" : "–"}` : "–"; $("m-time").textContent = c ? `N=${n} · ${tsFmt(c.created)}` : "–";
+  const th = data.thresholds || {}; $("f-th").textContent = th.drift_rmse_threshold_mw ? `${fmt(th.drift_rmse_threshold_mw)} MW` : "–";
+}
+async function loadVersions() {
+  const { ok, data } = await getJSON("/models/versions"); const tb = $("ver-body");
+  if (!ok || !data || !data.versions.length) { if (tb) tb.innerHTML = `<tr><td colspan="6" class="empty">등록된 버전이 없습니다</td></tr>`; return; }
+  const base = data.versions.find((v) => v.mode === "scratch" && v.val_metrics && v.val_metrics.val_rmse_lstm != null);
+  if (base) { const m = base.val_metrics, naive = m.val_rmse_zero, lstm = m.val_rmse_lstm; $("f-lstm").textContent = `${fmt(lstm)} MW`; const dlt = naive ? (lstm - naive) / naive * 100 : null; $("f-delta").textContent = dlt == null ? "–" : `${dlt > 0 ? "+" : ""}${dlt.toFixed(0)}%`; $("f-delta").className = "chip " + (dlt != null && dlt < 0 ? "ok" : "warn"); $("f-lstm-d").textContent = `naive(KPX 예측 그대로) ${fmt(naive)} MW 대비 · v${base.version} 기준`; $("f-dir").textContent = m.val_dirhit_lstm != null ? `${(m.val_dirhit_lstm * 100).toFixed(0)}%` : "–"; }
+  try { const vr = await getJSON("/metrics/validation"); const per = vr.ok && vr.data.periods && vr.data.periods[0]; if (!per && base && base.val_metrics && base.val_metrics.val_wape_lstm != null) { const m = base.val_metrics; $("f-aux").textContent = `${fmt(m.val_mae_lstm)} MW / ${fmt(m.val_wape_lstm, 2)} / ${m.val_bias_lstm > 0 ? "+" : ""}${fmt(m.val_bias_lstm)} MW`; $("f-aux-d").textContent = `WAPE ${fmt(m.val_wape_lstm, 2)} = KPX 오차의 ${Math.round(m.val_wape_lstm * 100)}%만 남음 · Bias ${m.val_bias_lstm > 0 ? "과대" : "과소"} 쪽 ${fmt(Math.abs(m.val_bias_lstm))} MW · v${base.version} 등록 지표`; }
+    else if (per && per.metrics.lstm) { const l = per.metrics.lstm, z = per.metrics.zero || {}; $("f-aux").textContent = `${fmt(l.mae)} MW / ${fmt(l.wape, 2)} / ${l.bias > 0 ? "+" : ""}${fmt(l.bias)} MW`; $("f-aux-d").textContent = `naive MAE ${fmt(z.mae)} → ${fmt(l.mae)} · WAPE ${fmt(l.wape, 2)} = KPX 오차의 ${Math.round(l.wape * 100)}%만 남음 · Bias ${l.bias > 0 ? "과대" : "과소"} 쪽 ${fmt(Math.abs(l.bias))} MW`; } } catch (e) {}
+  if (tb) tb.innerHTML = data.versions.map((v) => `<tr><td><b>v${v.version}</b></td><td class="num">${tsFmt(v.created)}</td><td><span class="chip ghost">${v.mode}</span></td><td class="num">${v.rmse != null ? fmt(v.rmse) + " MW" : "–"}${v.champion_rmse != null ? `<span class="hint"> (이전 ${fmt(v.champion_rmse)})</span>` : ""}</td><td class="hint">${v.gate || "–"}</td><td>${v.is_champion ? chip("ok", "champion") : `<span class="hint">archived</span>`}</td></tr>`).join("");
+}
+async function loadAlerts() {
+  const { ok, data } = await getJSON("/alerts/recent?n=12"); const el = $("alerts");
+  if (!ok || !data || !data.alerts.length) { el.innerHTML = `<div class="empty">아직 알람이 없습니다</div>`; return; }
+  const lv = (l) => l === "OK" ? "ok" : l === "WARN" ? "err" : l === "WATCH" ? "warn" : "info";
+  el.innerHTML = data.alerts.map((a) => `<div class="alert ${lv(a.level)}"><div class="ic">${a.level === "OK" ? "✓" : a.level === "WARN" ? "!" : a.level === "WATCH" ? "◔" : "i"}</div><div class="m" title="${a.message.replace(/"/g, "'")}">[${a.level}] ${a.message}<small>${ago(a.ts)}</small></div></div>`).join("");
+}
+const STEPS = [["01", "데이터 수집", "실적 수신·연결"], ["02", "모니터링", "롤링 21건 RMSE"], ["03", "드리프트 감지", "임계값 초과 누적"], ["04", "재학습 트리거", "최근 60행 (+백필)"], ["05", "모델 학습", "fine-tuning"], ["06", "게이트", "후보 vs champion"], ["07", "배포", "champion 승격"]];
+function renderPipe() {
+  const el = $("pipe"), badge = $("pipe-badge");
+  let st = Array(7).fill(""), lb = Array(7).fill("대기 중");
+  if (lastReplay) {
+    const d = lastReplay.data, re = d.retrains[d.retrains.length - 1], watched = d.events.length > 0;
+    badge.textContent = `마지막 실행 ${ago(lastReplay.ts)}`; badge.className = "chip";
+    if (re && re.promoted) { st = ["ok", "ok", "err", "ok", "ok", "ok", "ok"]; lb = ["완료", "완료", "감지", "실행", "완료", `통과 ${fmt(re.rmse)}<${fmt(re.champion_rmse)}`, `v${re.version} 승격`]; }
+    else if (re && re.rmse != null) { st = ["ok", "ok", "err", "ok", "ok", "warn", ""]; lb = ["완료", "완료", "감지", "실행", "완료", `차단 ${fmt(re.rmse)}≥${fmt(re.champion_rmse)}`, "기존 유지"]; }
+    else if (re) { st = ["ok", "ok", "err", "warn", "", "", ""]; lb = ["완료", "완료", "감지", "보류", "–", "–", "–"]; }
+    else if (watched) { st = ["ok", "ok", "warn", "", "", "", ""]; lb = ["완료", "완료", "관찰 중", "대기", "–", "–", "–"]; }
+    else { st = ["ok", "ok", "ok", "", "", "", ""]; lb = ["완료", "완료", "정상", "–", "–", "–", "–"]; }
+  }
+  el.innerHTML = STEPS.map((s, i) => `<div class="stp ${st[i]}"><div class="n">STEP ${s[0]}</div><div class="t">${s[1]}</div><div class="s">${s[2]}</div><div class="st">${lb[i]}</div></div>`).join("");
+}
+async function refreshAll() { await Promise.all([loadMetrics(), loadModel(), loadVersions(), loadAlerts(), loadDataStatus()]); renderPipe(); loadGapRing(); }
+
+/* ---------- 3D 섬 (Three.js, 개념 시각화) ---------- */
+let G = null; const ALERT = { drift: false, driftMsg: "", under: false, underMsg: "" };
+function syncAlert() { if (!G) return; if (ALERT.drift) G.setDrift(true, ALERT.driftMsg); else if (ALERT.under) G.setDrift(true, ALERT.underMsg); else G.setDrift(false); }
+function initGlobe() {
+  if (G || !window.THREE) return;
+  const wrap = $("island"), canvas = $("island-canvas"), label = $("island-label");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100); camera.position.set(0, 4.0, 7.2); camera.lookAt(0, 0.75, 0);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xD9DCC8, 0.8)); const dl = new THREE.DirectionalLight(0xffffff, 0.75); dl.position.set(-3.5, 6, 4); dl.castShadow = true; dl.shadow.mapSize.set(2048, 2048); Object.assign(dl.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6, near: 1, far: 20 }); dl.shadow.bias = -0.0006; scene.add(dl);
+  const root = new THREE.Group(); scene.add(root);
+  const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, metalness: 0, ...o });
+  const add = (geo, mat, x = 0, y = 0, z = 0, parent = root, shadow = true) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = shadow; m.receiveShadow = true; parent.add(m); return m; };
+  // 받침 원반
+  // 섬 (불규칙 타원 → 압출)
+  const shape = new THREE.Shape(); const pts = [];
+  for (let i = 0; i < 72; i++) { const t = i / 72 * Math.PI * 2, r = 1 + 0.07 * Math.sin(3 * t + 0.6) + 0.045 * Math.sin(7 * t + 1.7) + 0.03 * Math.sin(11 * t); pts.push([3.5 * r * Math.cos(t), 1.85 * r * Math.sin(t)]); }
+  shape.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach((p) => shape.lineTo(p[0], p[1])); shape.closePath();
+  const island = add(new THREE.ExtrudeGeometry(shape, { depth: 0.34, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.08, bevelSegments: 3 }), [M(0x9FB548), M(0xE2D3A4)], 0, 0, 0); island.rotation.x = -Math.PI / 2;
+  island.material = [M(0x9FB548), M(0xE2D3A4)]; island.geometry.groups.forEach((g, i) => g.materialIndex = i === 0 ? 0 : 1);
+  // 한라산 + 언덕
+  add(new THREE.ConeGeometry(1.25, 1.45, 9), M(0x7E9A2E, { flatShading: true }), 0, 0.34 + 0.72, 0);
+  add(new THREE.ConeGeometry(0.42, 0.5, 9), M(0xF4F1E6, { flatShading: true }), 0, 0.34 + 1.45 - 0.2, 0);
+  [[1.3, 0.3, 0.45, 0.32], [-1.2, 0.55, 0.5, 0.3], [1.9, -0.5, 0.35, 0.22], [-0.6, -0.9, 0.4, 0.24], [2.6, 0.4, 0.3, 0.18], [0.7, 1.0, 0.35, 0.2]].forEach(([x, z, r, h]) => add(new THREE.ConeGeometry(r, h, 7), M(0x8EA838, { flatShading: true }), x, 0.34 + h / 2, z));
+  // 나무 (작은 구)
+  for (let i = 0; i < 70; i++) { const t = Math.random() * Math.PI * 2, rr = 0.55 + Math.random() * 0.4; const x = 3.1 * rr * Math.cos(t), z = 1.6 * rr * Math.sin(t); if (Math.hypot(x / 1.3, z / 1.3) < 1) continue; add(new THREE.SphereGeometry(0.06 + Math.random() * 0.05, 6, 5), M(0x6F8A22), x, 0.4, z, root, false); }
+  // 서쪽 바다 + 풍력
+  add(new THREE.CircleGeometry(0.95, 40), M(0xBFE6E2, { roughness: 0.4 }), -2.45, 0.355, 0.3, root, false).rotation.x = -Math.PI / 2;
+  const turbines = [];
+  [[-2.95, 0.05], [-2.5, -0.35], [-2.15, 0.5], [-2.7, 0.75]].forEach(([x, z]) => { const g = new THREE.Group(); g.position.set(x, 0.35, z); root.add(g);
+    add(new THREE.CylinderGeometry(0.025, 0.05, 1.05, 10), M(0xF6F6F2), 0, 0.52, 0, g); add(new THREE.BoxGeometry(0.12, 0.08, 0.16), M(0xF6F6F2), 0, 1.05, 0.02, g);
+    const hub = new THREE.Group(); hub.position.set(0, 1.05, 0.11); g.add(hub);
+    for (let k = 0; k < 3; k++) { const bl = add(new THREE.BoxGeometry(0.035, 0.5, 0.015), M(0xFFFFFF), 0, 0.25, 0, hub); bl.geometry.translate(0, 0, 0); const p = new THREE.Group(); p.rotation.z = k * Math.PI * 2 / 3; p.add(bl); hub.add(p); }
+    add(new THREE.SphereGeometry(0.035, 10, 10), M(0xE9794A), 0, 1.05, 0.12, g); turbines.push(hub); });
+  // 동쪽 태양광
+  [[2.25, -0.65], [2.75, -0.1]].forEach(([x, z]) => { for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) { const p = add(new THREE.BoxGeometry(0.22, 0.05, 0.17), M(0x2F4FA8, { roughness: 0.35, metalness: 0.2 }), x + j * 0.25, 0.44, z + i * 0.21); p.rotation.x = -0.5; } });
+  // 도시 (북 제주시 / 남 서귀포시 / 동쪽 소규모)
+  const city = (cx, cz, n, seed) => { for (let i = 0; i < n; i++) { const r = Math.sin(seed + i * 7.3) * 0.5 + 0.5, h = 0.18 + r * 0.5; add(new THREE.BoxGeometry(0.14, h, 0.14), M(0xF4F4EF), cx + Math.cos(i * 2.4 + seed) * 0.22 * (1 + (i % 3)), 0.34 + h / 2, cz + Math.sin(i * 2.4 + seed) * 0.16 * (1 + (i % 2))); } };
+  city(0.55, -1.05, 9, 1.1); city(-0.25, 1.15, 8, 2.3); city(2.6, 0.55, 5, 4.2);
+  // 송전 링 + 노드 + 에너지 펄스
+  const nodes = [[-1.65, -0.3], [-0.55, -1.0], [0.95, -1.15], [2.1, -0.55], [2.25, 0.45], [0.85, 1.15], [-0.75, 1.05]].map(([x, z]) => new THREE.Vector3(x, 0.72, z));
+  const curve = new THREE.CatmullRomCurve3(nodes, true, "catmullrom", 0.6);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xFFE94A }), glowMat = new THREE.MeshBasicMaterial({ color: 0xFFF3A0, transparent: true, opacity: 0.45 });
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.045, 10, true), ringMat));
+  root.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.085, 10, true), glowMat));
+  const nodeMeshes = nodes.map((p) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), new THREE.MeshBasicMaterial({ color: 0xFFF6B8 })); m.material.userData.base = 0xFFF6B8; m.position.copy(p); root.add(m); const h = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 16), new THREE.MeshBasicMaterial({ color: 0xFFD54A, transparent: true, opacity: 0.4 })); h.material.userData.base = 0xFFD54A; h.position.copy(p); root.add(h); return [m, h]; });
+  const pulse = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), new THREE.MeshBasicMaterial({ color: 0xFFFFFF })); root.add(pulse);
+  // 호버 마커 (보이지 않는 구)
+  const marks = [[-2.6, 1.0, 0.25, "풍력", "서쪽 해상풍력 (개념)"], [0.6, 0.8, -1.05, "제주시", "북부 도심 수요"], [2.55, 0.6, -0.4, "태양광", "동부 태양광 (개념)"], [0, 1.9, 0, "한라산", "제주 계통 중심"], [-0.25, 0.8, 1.15, "서귀포시", "남부 도심 수요"]].map(([x, y, z, t, d]) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 8), new THREE.MeshBasicMaterial({ visible: false })); m.position.set(x, y, z); m.userData = { t, d }; root.add(m); return m; });
+  // 드래그 (살짝 돌리기, 놓으면 복귀)
+  let drag = null, ry = 0, rx = 0, timer = null, hover = null; const rc = new THREE.Raycaster();
+  canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY }; canvas.classList.add("drag"); clearTimeout(timer); });
+  window.addEventListener("pointerup", () => { if (!drag) return; drag = null; canvas.classList.remove("drag"); timer = setTimeout(() => { G.ease = true; }, 1600); });
+  canvas.addEventListener("pointermove", (e) => {
+    if (drag) { ry = Math.max(-0.7, Math.min(0.7, ry + (e.clientX - drag.x) * 0.006)); rx = Math.max(-0.12, Math.min(0.3, rx + (e.clientY - drag.y) * 0.004)); drag = { x: e.clientX, y: e.clientY }; G.ease = false; return; }
+    const r = canvas.getBoundingClientRect(); rc.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
+    const hit = rc.intersectObjects(marks)[0]; hover = hit ? hit.object : null;
+  });
+  canvas.addEventListener("pointerleave", () => hover = null);
+  const resize = () => { const w = wrap.clientWidth, h = wrap.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w / h < 1.1 ? 50 : w / h < 1.5 ? 43 : 37; camera.updateProjectionMatrix(); };
+  new ResizeObserver(resize).observe(wrap); resize();
+  let driftOn = false, driftMsg = ""; const peakLabel = $("peak-label"), peakPos = new THREE.Vector3(0, 2.05, 0);
+  G = { ease: true, resize, setDrift(on, msg) {
+    driftOn = on; driftMsg = msg || "";
+    ringMat.color.set(on ? 0xE0432E : 0xFFE94A); glowMat.color.set(on ? 0xFF8A75 : 0xFFF3A0); glowMat.opacity = on ? 0.55 : 0.45;
+    nodeMeshes.forEach(([m, h]) => { m.material.color.set(on ? 0xFFB3A6 : m.material.userData.base); h.material.color.set(on ? 0xE0432E : h.material.userData.base); });
+    pulse.material.color.set(on ? 0xFFE3DD : 0xFFFFFF); wrap.classList.toggle("drift", on);
+  } };
+  let t = 0;
+  (function loop() { requestAnimationFrame(loop); t += 0.016;
+    if (G.ease && !drag) { ry += (0 - ry) * 0.04; rx += (0 - rx) * 0.04; } root.rotation.y = ry; root.rotation.x = rx;
+    turbines.forEach((h, i) => h.rotation.z -= 0.045 + i * 0.004);
+    const s = 1 + 0.18 * Math.sin(t * 3); nodeMeshes.forEach(([m, h], i) => { const k = 1 + 0.35 * Math.sin(t * 3 + i); h.scale.set(k, k, k); });
+    pulse.position.copy(curve.getPointAt((t * 0.06) % 1)); pulse.position.y += 0.02;
+    if (driftOn) { const v = peakPos.clone().applyMatrix4(root.matrixWorld).project(camera); peakLabel.style.display = "block"; peakLabel.style.left = `${(v.x + 1) / 2 * wrap.clientWidth}px`; peakLabel.style.top = `${(1 - v.y) / 2 * wrap.clientHeight}px`; peakLabel.innerHTML = driftMsg; } else peakLabel.style.display = "none";
+    if (hover) { const v = hover.position.clone().applyMatrix4(root.matrixWorld).project(camera); label.style.display = "block"; label.style.left = `${(v.x + 1) / 2 * wrap.clientWidth}px`; label.style.top = `${(1 - v.y) / 2 * wrap.clientHeight}px`; label.innerHTML = `${hover.userData.t}<small>${hover.userData.d}</small>`; } else label.style.display = "none";
+    renderer.render(scene, camera); })();
+}
+function renderChart(rows, next) {
+  const el = $("chart"); if (!rows.length) { el.innerHTML = ""; return; }
+  const W = 760, H = 170, padL = 36, padB = 22, padT = 10, n = rows.length + (next ? 1 : 0), bw = (W - padL - 6) / n;
+  const vals = rows.map((r) => r.gap_mw).concat(next ? [next.predicted_gap_mw] : []), mx = Math.max(...vals.map(Math.abs), 10), step = mx > 120 ? 50 : mx > 60 ? 30 : mx > 30 ? 20 : 10, top = Math.ceil(mx / step) * step;
+  const y0 = padT + (H - padT - padB) / 2, sc = (v) => y0 - v / top * (H - padT - padB) / 2;
+  let g = "";
+  for (let v = -top; v <= top; v += step) g += `<line x1="${padL}" x2="${W - 4}" y1="${sc(v)}" y2="${sc(v)}" stroke="${v === 0 ? "var(--muted)" : "var(--line-2)"}" stroke-width="${v === 0 ? 1.2 : 1}"/><text x="${padL - 6}" y="${sc(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${v}</text>`;
+  rows.forEach((r, i) => { const x = padL + i * bw, v = r.gap_mw; g += `<rect x="${x + bw * 0.2}" y="${Math.min(sc(0), sc(v))}" width="${bw * 0.6}" height="${Math.max(1, Math.abs(sc(v) - sc(0)))}" rx="1.5" fill="${v < 0 ? "#D9641F" : "#AAB026"}" data-tip="${r.date} · ${v > 0 ? "+" : ""}${v.toFixed(1)} MW · ${v < 0 ? "과소예측" : "과대예측"} · KPX 예측 ${r.forecast_mw.toFixed(0)} MW"></rect>`; if (i % 5 === 0) g += `<text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="var(--muted)">${r.date.slice(5).replace("-", "/")}</text>`; });
+  if (next) { const x = padL + rows.length * bw, v = next.predicted_gap_mw; g += `<rect x="${x + bw * 0.2}" y="${Math.min(sc(0), sc(v))}" width="${bw * 0.6}" height="${Math.max(1, Math.abs(sc(v) - sc(0)))}" rx="1.5" fill="${v < 0 ? "#D9641F" : "#AAB026"}" fill-opacity="0.18" stroke="${v < 0 ? "#D9641F" : "#788417"}" stroke-width="1.2" stroke-dasharray="3 2" data-tip="${next.target_date} 내일 예측 · ${v.toFixed(1)} MW · ${dirLabel(next.direction)}"></rect><text x="${x + bw / 2}" y="${H - 6}" text-anchor="middle" font-size="10" font-weight="800" fill="#D9641F">${next.target_date.slice(5).replace("-", "/")}</text><text x="${x + bw / 2}" y="${(v < 0 ? sc(v) + 12 : sc(v) - 4)}" text-anchor="middle" font-size="10" font-weight="800" fill="${v < 0 ? "#D9641F" : "#788417"}">${v.toFixed(1)}</text>`; }
+  el.setAttribute("viewBox", `0 0 ${W} ${H}`); el.innerHTML = g;
+  if (!el._tipBound) { el._tipBound = true; const tip = $("chart-tip"), box = el.parentElement;
+    el.addEventListener("mousemove", (e) => { const t = e.target.closest && e.target.closest("rect[data-tip]"); if (!t) { tip.style.display = "none"; el.querySelectorAll("rect[data-tip]").forEach((r) => r.style.opacity = ""); return; }
+      el.querySelectorAll("rect[data-tip]").forEach((r) => r.style.opacity = r === t ? "" : "0.45"); const b = box.getBoundingClientRect(), rb = t.getBoundingClientRect();
+      tip.style.display = "block"; tip.textContent = t.dataset.tip; tip.style.left = `${rb.left + rb.width / 2 - b.left}px`; tip.style.top = `${Math.min(rb.top, rb.bottom) - b.top}px`; });
+    el.addEventListener("mouseleave", () => { tip.style.display = "none"; el.querySelectorAll("rect[data-tip]").forEach((r) => r.style.opacity = ""); }); }
+}
+async function loadGapRing() {
+  initGlobe();
+  const st = await getJSON("/data/status"); if (!st.ok || !st.data || !st.data.exists) { renderChart([], null); return; }
+  const hs = await getJSON("/predict/history?n=1"); const replayed = hs.ok && hs.data && (hs.data.last_replay_end || hs.data.last_actual_date);
+  const end = replayed && replayed <= st.data.end_date ? replayed : st.data.end_date;   // 재생했으면 그 마지막 실적일, 아니면 등록 데이터 마지막 날
+  const h = await getJSON(`/data/history?start=${isoPlus(end, -29)}&end=${end}&lead=0`), nx = await getJSON(`/predict/next?as_of=${end}`);
+  const next = nx.ok && nx.data && nx.data.status === "ok" ? nx.data : null;
+  if (h.ok && h.data) renderChart(h.data.history, next);
+  $("ch-range").textContent = `${isoPlus(end, -29)} ~ ${end}${replayed ? " · 최근 재생 구간 기준" : " · 등록 데이터 기준"}`; $("ch-note").textContent = next ? `· 내일(${next.target_date}) ${dirLabel(next.direction)}` : "";
+  const b = $("b-next");
+  if (next) { const v = next.predicted_gap_mw, under = next.direction === "under"; b.className = "badge " + (under ? "err" : next.direction === "over" ? "ok" : "warn"); b.innerHTML = `${v < 0 ? "▼" : "▲"} <span class="dim">내일 예상 갭</span> ${v > 0 ? "+" : ""}${v.toFixed(1)} MW`;
+    ALERT.under = under; ALERT.underMsg = `▼ 내일(${next.target_date}) 과소예측 위험 · 예상 갭 ${v.toFixed(1)} MW<small>실제 수요가 KPX 예측보다 클 가능성 · 기준일 ${end}(${replayed ? "최근 재생 마지막 날" : "등록 데이터 마지막 날"})</small>`; }
+  else { b.className = "badge"; b.innerHTML = `<span class="dim">내일 예상 갭</span> –`; ALERT.under = false; }
+  syncAlert();
+}
+
+/* ---------- simulation / datasets / system (기존 로직) ---------- */
+async function replay(label) {
+  const start = $("replay-start").value, end = $("replay-end").value, st = $("replay-status");
+  const h = await getJSON(`/data/history?start=${start}&end=${end}&lead=${SEQ_LEN}`);
+  if (!h.ok || !h.data || h.data.history.length < SEQ_LEN + 1) {
+    const ds = await getJSON("/data/status"); let why = "Datasets 탭에서 먼저 등록하세요";
+    if (ds.ok && ds.data && ds.data.exists) { why = `등록된 갭 데이터는 ${ds.data.start_date} ~ ${ds.data.end_date} 입니다`; const ao = ds.data.unmatched && ds.data.unmatched.actual_only_after; if (ao && ao.n) why += ` · ${ao.start} ~ ${ao.end}은 실적만 있고 KPX 예측 파일(pssJeju_${ao.end.slice(0, 4)}.xlsx)이 없어 갭이 없습니다`; }
+    st.innerHTML = chip("err", `선택 구간(${start} ~ ${end})에 재생할 갭 데이터가 없습니다 · ${why}`); return; }
+  let history = h.data.history; if (label === "synthetic") history = history.map((p) => p.date >= start ? { ...p, gap_mw: p.gap_mw - 60 } : p);
+  st.innerHTML = chip("warn", `재생 중… ${history.length - SEQ_LEN}일 (재학습이 걸리면 수십 초)`);
+  try {
+    const r = await fetch("/predict/replay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ history, label }) });
+    const d = await safeJson(r); if (!r.ok) { st.innerHTML = chip("err", `오류 ${r.status}`); show($("replay-raw"), d, true); return; }
+    lastReplay = { data: d, ts: Date.now() / 1000 };
+    const dc = d.drift_check || {}, nRe = d.retrains.length, prom = d.retrains.filter((x) => x.promoted).length, maxStreak = Math.max(0, ...d.events.map((e) => e.breach_streak_days || 0));
+    st.innerHTML = (label === "synthetic" ? chip("warn", "합성 시나리오") : chip("ghost", "실제 관측 데이터")) + " " + chip(nRe ? (prom ? "ok" : "warn") : "ok", `${d.n_predictions}일 재생 · ${nRe ? `재학습 ${nRe}회 · 승격 ${prom}회` : "재학습 없음"}`);
+    $("replay-stats").style.display = "grid";
+    $("st-rmse").textContent = `${fmt(dc.rolling_rmse_mw)} MW`; $("st-rmse-d").textContent = `특수일 포함 ${fmt(dc.rolling_rmse_incl_special_mw)} · 임계값 ${fmt(dc.threshold_mw)} MW` + (dc.rolling_wape != null ? ` · WAPE ${fmt(dc.rolling_wape, 2)} · Bias ${dc.rolling_bias_mw > 0 ? "+" : ""}${fmt(dc.rolling_bias_mw)}` : "");
+    $("st-streak").textContent = `${dc.breach_streak_days || 0}일`; $("st-streak-d").textContent = (dc.breach_streak_days ? `${dc.breach_streak_start}부터 연속 · ` : "") + `구간 최대 ${maxStreak}일 연속`;
+    $("st-re").textContent = `${nRe} / ${prom}`;
+    $("rp-body").innerHTML = d.predictions.map((p) => `<tr><td class="num">${p.date}</td><td class="num ${p.predicted < 0 ? "neg" : "pos"}">${fmt(p.predicted)}</td><td class="num ${p.actual < 0 ? "neg" : "pos"}">${fmt(p.actual)}</td><td>${dirLabel(p.direction)}</td><td class="hint">${p.model_version}</td></tr>`).join("") || `<tr><td colspan="5" class="empty">없음</td></tr>`;
+    $("ev-body").innerHTML = d.events.map((e) => { const l = e.status === "retrain_triggered" ? "err" : e.status === "cooldown" ? "ghost" : "warn"; const t = e.status === "retrain_triggered" ? "재학습 선언" : e.status === "cooldown" ? `쿨다운 ${e.cooldown_days_left || ""}일` : `관찰 ${e.consecutive || 1}/2`; return `<tr><td class="num">${e.date}</td><td>${chip(l, t)}</td><td class="num">${e.breach_streak_days || 0}일째</td><td class="num">${fmt(e.rolling_rmse_mw)} / ${fmt(e.rolling_rmse_incl_special_mw)}</td><td class="num">${fmt(e.threshold_mw)}</td></tr>`; }).join("") || `<tr><td colspan="5" class="empty">임계값 초과 없음</td></tr>`;
+    show($("replay-raw"), { label: d.label, drift_check: dc, events: d.events, retrains: d.retrains.map((x) => ({ as_of: x.as_of, promoted: x.promoted, candidate_rmse: x.rmse, champion_rmse: x.champion_rmse, version: x.version, status: x.retrain && x.retrain.status, data_source: x.retrain && x.retrain.data_source })) });
+    refreshAll();
+  } catch (e) { st.innerHTML = chip("err", "연결 실패: " + e.message); }
+}
+async function resetState() { const r = await fetch("/predict/reset", { method: "POST" }); const d = await safeJson(r); $("replay-status").innerHTML = r.ok ? chip("ghost", "예측 이력·누적 일수·쿨다운을 비웠습니다 (모델은 유지)") : chip("err", "초기화 실패"); lastReplay = null; $("replay-stats").style.display = "none"; $("rp-body").innerHTML = `<tr><td colspan="5" class="empty">재생 결과가 여기에 표시됩니다</td></tr>`; $("ev-body").innerHTML = `<tr><td colspan="5" class="empty">경보·재학습 이벤트</td></tr>`; refreshAll(); }
+async function predictOne() {
+  const target = $("predict-date").value, st = $("predict-status"), prev = isoPlus(target, -1);
+  const h = await getJSON(`/data/history?start=${prev}&end=${prev}&lead=${SEQ_LEN - 1}`);
+  if (!h.ok || !h.data || h.data.history.length !== SEQ_LEN) { st.innerHTML = chip("err", `목표일 직전 ${SEQ_LEN}일의 확정 이력이 없습니다`); return; }
+  st.innerHTML = chip("ghost", "예측 중…");
+  const r = await fetch("/predict", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target_date: target, sequence: h.data.history }) });
+  const d = await safeJson(r); if (!r.ok) { st.innerHTML = chip("err", `오류 ${r.status}`); show($("predict-raw"), d, true); return; }
+  if (d.status === "held") { st.innerHTML = chip("warn", "보류: " + d.reason); show($("predict-raw"), d); return; }
+  st.innerHTML = chip(d.direction === "under" ? "err" : d.direction === "over" ? "warn" : "ok", `${target} 예측 갭 ${fmt(d.predicted_gap_mw)} MW · ${dirLabel(d.direction)}`) + " " + chip("ghost", d.model_version);
+  show($("predict-raw"), { request: { target_date: target, sequence: h.data.history }, response: d }); loadMetrics(); loadModel();
+}
+
+/* ---------- datasets ---------- */
+async function loadDataStatus() {
+  const { ok, data } = await getJSON("/data/status"); const el = $("data-status");
+  const ao = data && data.unmatched && data.unmatched.actual_only_after;
+  el.innerHTML = (!ok || !data || !data.exists) ? "업로드된 데이터 없음" : `<b>${data.filename}</b> · ${data.rows}일 (${data.start_date} ~ ${data.end_date}) · 갭 평균 ${fmt(data.gap_mean_mw)} / 표준편차 ${fmt(data.gap_std_mw)} MW · 과소예측 ${(data.under_forecast_share * 100).toFixed(1)}%` + (ao && ao.n ? `<br>${chip("err", `⚠ ${ao.start} ~ ${ao.end} 실적 ${ao.n}일은 KPX 예측 파일(pssJeju_${ao.end.slice(0, 4)}.xlsx)이 없어 갭 미생성`)}` : "");
+}
+async function loadDatasets() {
+  loadDataStatus();
+  const r = await getJSON("/data/raw-files"); $("raw-body").innerHTML = (r.ok && r.data.files.length) ? r.data.files.map((f) => `<tr><td>${f.name}</td><td>${chip(f.kind.includes("미사용") ? "ghost" : "ok", f.kind)}</td><td class="num">${(f.size / 1024).toFixed(0)} KB</td></tr>`).join("") : `<tr><td colspan="3" class="empty">없음</td></tr>`;
+  const u = await getJSON("/data/uploads"); $("up-body").innerHTML = (u.ok && u.data.files.length) ? u.data.files.map((f, i) => `<tr><td>${f.name} ${i === 0 ? chip("ok", "사용 중") : ""}</td><td class="num">${tsFmt(f.mtime)}</td><td class="num">${(f.size / 1024).toFixed(0)} KB</td></tr>`).join("") : `<tr><td colspan="3" class="empty">없음</td></tr>`;
+  loadQuality();
+}
+async function loadQuality() { const q = await getJSON("/data/quality"); $("quality").textContent = q.ok ? q.data.report : "–"; }
+async function uploadRaw() {
+  const input = $("raw-input"), st = $("raw-status"), box = $("raw-report");
+  if (!input.files.length) { st.innerHTML = chip("warn", "XLSX와 CSV를 함께 선택하세요"); return; }
+  const form = new FormData(); for (const f of input.files) form.append("files", f); st.innerHTML = chip("ghost", `업로드·전처리 중… (${input.files.length}개)`);
+  try { const r = await fetch("/data/upload-raw", { method: "POST", body: form }); const d = await safeJson(r);
+    if (!r.ok) { st.innerHTML = chip("err", (d.detail && (d.detail.detail || d.detail)) || "실패"); show(box, d, true); return; }
+    st.innerHTML = chip("ok", `등록 완료 · ${d.rows}일 (${d.start_date} ~ ${d.end_date})`) + (d.rejected.length ? " " + chip("warn", `거부 ${d.rejected.length}개`) : "") + ((d.warnings || []).length ? " " + chip("err", "⚠ 짝이 없는 기간 있음 — 아래 설명 참고") : "");
+    show(box, ((d.warnings || []).length ? "⚠ " + d.warnings.join("\n⚠ ") + "\n\n" : "") + d.report + (d.rejected.length ? "\n\n거부: " + JSON.stringify(d.rejected) : ""), (d.warnings || []).length > 0); loadDatasets(); loadModel(); loadGapRing();
+  } catch (e) { st.innerHTML = chip("err", "요청 실패: " + e.message); }
+}
+async function uploadFile() {
+  const input = $("upload-input"), st = $("upload-status"); if (!input.files.length) { st.innerHTML = chip("warn", "파일을 먼저 선택하세요"); return; }
+  const form = new FormData(); form.append("file", input.files[0]); st.innerHTML = chip("ghost", "업로드 중…");
+  try { const r = await fetch("/data/upload", { method: "POST", body: form }); const d = await safeJson(r);
+    st.innerHTML = r.ok ? chip("ok", `등록 완료 · ${d.rows}일 (${d.start_date} ~ ${d.end_date})`) : chip("err", d.detail || "업로드 실패"); loadDatasets();
+  } catch (e) { st.innerHTML = chip("err", "요청 실패: " + e.message); }
+}
+
+/* ---------- system ---------- */
+async function loadSystem() {
+  const h = await getJSON("/health"), m = await getJSON("/models/current");
+  const kv = (k, v) => `<div class="kv"><span class="k">${k}</span><span class="vv">${v}</span></div>`;
+  if (h.ok) { const d = h.data; $("sys-kv").innerHTML = kv("상태", chip("ok", d.status)) + kv("모델 로드", d.model_loaded ? "예" : "아니오 (lazy)") + kv("모델 버전", d.model_version || "–") + kv("MODEL_SOURCE", d.model_source) + kv("LOADING_MODE", d.loading_mode) + kv("입력 길이 N", d.seq_len) + kv("데이터 파일", d.data_file || "–") + kv("마지막 실적 수신일", d.last_actual_date || "–") + kv("가동 시간", m.ok ? `${Math.floor(m.data.uptime_seconds / 60)}분` : "–"); }
+  if (m.ok && m.data.thresholds) { const t = m.data.thresholds, b = t.basis || {}; $("th-kv").innerHTML = kv("과소예측(under) 기준", `≤ ${fmt(t.direction_under_mw)} MW`) + kv("과대예측(over) 기준", `≥ ${fmt(t.direction_over_mw)} MW`) + kv("드리프트 임계값", `${fmt(t.drift_rmse_threshold_mw)} MW (롤링 ${t.drift_window}건)`) + kv("근거", `${(b.period || []).join(" ~ ")} 롤링 RMSE 95분위 (특수일 ${b.special_days_excluded || 0}일 제외)`) + kv("특수일 포함 시 95분위", `${fmt(b.rolling_rmse_p95_including_special)} MW`); }
+  const l = await getJSON("/logs"); $("log-files").innerHTML = (l.ok && l.data.length) ? l.data.map((f) => `<button class="btn s" onclick="openLog('${f.name}')">${f.name} (${(f.size / 1024).toFixed(1)} KB)</button>`).join("") : `<span class="hint">아직 로그가 없습니다</span>`;
+}
+async function openLog(n) { const r = await getJSON(`/logs/${encodeURIComponent(n)}`); show($("log-content"), r.ok ? (r.data.content || "(비어 있음)") : "불러오기 실패", !r.ok); }
+
+
+/* ---------- init ---------- */
+initGlobe(); refreshAll(); setInterval(() => { loadMetrics(); loadAlerts(); }, 15000);
+</script>
+</body>
+</html>

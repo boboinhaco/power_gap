@@ -1,0 +1,22 @@
+{
+  "actual_only": {
+    "n": 122,
+    "start": "2023-09-01",
+    "end": "2023-12-31"
+  },
+  "forecast_only": {
+    "n": 100,
+    "start": "2026-07-01",
+    "end": "2026-10-08"
+  },
+  "joined": {
+    "n": 912,
+    "start": "2024-01-01",
+    "end": "2026-06-30"
+  },
+  "actual_only_after": {
+    "n": 0,
+    "start": null,
+    "end": null
+  }
+}

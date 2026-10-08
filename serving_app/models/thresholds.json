@@ -1,0 +1,18 @@
+{
+  "direction_under_mw": -33.936,
+  "direction_over_mw": -7.831,
+  "drift_window": 21,
+  "drift_rmse_threshold_mw": 46.14199843131782,
+  "basis": {
+    "period": [
+      "2024-01-01",
+      "2024-12-31"
+    ],
+    "model": "lstm",
+    "rolling_rmse_p50": 28.11318915241781,
+    "rolling_rmse_p95": 46.14199843131782,
+    "rolling_rmse_max": 60.73466416758805,
+    "rolling_rmse_p95_including_special": 52.394318722081245,
+    "special_days_excluded": 33
+  }
+}
