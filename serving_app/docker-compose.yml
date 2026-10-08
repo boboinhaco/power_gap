@@ -1,0 +1,16 @@
+# 제주 전력수요예측 오차 사전경보 서빙 앱 (단일 서비스, 포트 8099)
+#
+#   docker compose -f serving_app/docker-compose.yml up --build
+#   -> 대시보드 http://localhost:8099/ , API 문서 http://localhost:8099/docs
+#
+# 이미지 빌드 시점에 원본 정규화 → 베이스라인 → MLflow 등록/승격이 끝나 있다 (Dockerfile 참고).
+# eager 로딩이라 기동 후 /health 가 model_loaded=true 일 때 시연을 시작한다.
+#   python scripts/simulate_drift.py --target container
+services:
+  serving-app:
+    build:
+      context: ..
+      dockerfile: serving_app/Dockerfile
+      args:
+        GATE_OVERRIDE: "0"
+    ports: ["8099:8099"]

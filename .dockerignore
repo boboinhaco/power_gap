@@ -1,0 +1,15 @@
+.git
+.DS_Store
+**/__pycache__
+**/*.pyc
+mlruns
+mlflow.db
+logs
+data/uploads
+data/predictions.csv
+serving_app/models/*.keras
+serving_app/models/*.pkl
+serving_app/models/thresholds.json
+docs/screenshots
+docs/screenshots.zip
+docs/ppt_review_v4.md
