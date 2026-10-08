@@ -55,6 +55,18 @@ def baseline_predictions(train_rows: list[dict], prev_gaps: list[float]) -> dict
 NAIVE_MODELS = ("zero", "train_mean", "persistence")
 
 
+def rolling_metric(records: list[dict], window: int, fn, exclude_dates: set | None = None) -> list[tuple[str, float, int]]:
+    """rolling_rmse와 같은 창 규칙으로 임의 지표 fn(y_true, y_pred)를 계산. 반환: [(date, value, n_used)]"""
+    out = []
+    for i in range(len(records)):
+        win = [r for r in records[max(0, i - window + 1):i + 1]
+               if not exclude_dates or r["date"] not in exclude_dates]
+        if not win:
+            out.append((records[i]["date"], 0.0, 0)); continue
+        out.append((records[i]["date"], fn([r["actual"] for r in win], [r["predicted"] for r in win]), len(win)))
+    return out
+
+
 def rolling_rmse(records: list[dict], window: int, exclude_dates: set | None = None) -> list[tuple[str, float, int]]:
     """
     날짜순 records([{date, predicted, actual}])에서 각 시점의 최근 window건 RMSE.

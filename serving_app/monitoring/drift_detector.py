@@ -17,11 +17,20 @@ WINDOW_SIZE = 21
 CONSECUTIVE_REQUIRED = 2
 MIN_USED = WINDOW_SIZE // 2  # 특수일 제외 후 남는 최소 건수
 FALLBACK_THRESHOLD = float(os.getenv("DRIFT_RMSE_THRESHOLD", "55.0"))
+# 판정 규칙: "rmse" = RMSE 하나 / "rmse+mae" = RMSE와 MAE가 둘 다 각자의 95분위를 넘어야 드리프트 (기본)
+#   RMSE는 하루 큰 오차(노이즈)에 민감하므로, 이상치에 둔감한 MAE도 같이 넘을 때만 진짜 악화로 본다.
+DRIFT_RULE = os.getenv("DRIFT_RULE", "rmse+mae")
 
 
 def threshold_mw() -> float:
     th = load_thresholds()
     return float(th["drift_rmse_threshold_mw"]) if th else FALLBACK_THRESHOLD
+
+
+def mae_threshold_mw() -> float | None:
+    th = load_thresholds()
+    v = th.get("drift_mae_threshold_mw") if th else None
+    return float(v) if v else None
 
 
 def compute_rmse(recent_predictions: list[dict]) -> float:
@@ -41,14 +50,20 @@ def evaluate(records: list[dict]) -> dict:
     rmse_excl = compute_rmse(used)
     yt, yp = [r["actual"] for r in used], [r["predicted"] for r in used]
     th = threshold_mw()
+    th_mae = mae_threshold_mw()
     ready = len(records) >= WINDOW_SIZE and len(used) >= MIN_USED
+    m = mae(yt, yp)
+    breach_rmse = bool(ready and rmse_excl > th)
+    breach_mae = bool(ready and th_mae is not None and m > th_mae)
+    breach = (breach_rmse and breach_mae) if (DRIFT_RULE == "rmse+mae" and th_mae is not None) else breach_rmse
     return {
         "date": records[-1]["date"], "n_records": len(records), "ready": ready,
         "rolling_rmse_mw": rmse_excl, "rolling_rmse_incl_special_mw": rmse_all,
         # 보조 지표(판정에는 쓰지 않음): MAE, WAPE(=Σ|잔차|/Σ|실제 갭|, naive=1.0), Bias(=mean(예측−실제))
         "rolling_mae_mw": mae(yt, yp), "rolling_wape": wape(yt, yp), "rolling_bias_mw": bias(yt, yp),
         "n_used": len(used), "special_excluded": sorted(d for d in excl if any(r["date"] == d for r in window)),
-        "threshold_mw": th, "breach": bool(ready and rmse_excl > th),
+        "threshold_mw": th, "mae_threshold_mw": th_mae, "rule": DRIFT_RULE,
+        "breach_rmse": breach_rmse, "breach_mae": breach_mae, "breach": breach,
     }
 
 

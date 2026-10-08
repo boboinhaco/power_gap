@@ -84,20 +84,23 @@ def check_and_trigger(records: list[dict], as_of: str | None = None) -> dict:
 
     remaining = _in_cooldown(as_of)
     if remaining:
-        logger.warning(f"[WATCH] rolling RMSE {info['rolling_rmse_mw']:.1f} MW > {info['threshold_mw']:.1f} MW "
+        logger.warning(f"[WATCH] rolling RMSE {info['rolling_rmse_mw']:.1f} MW > {info['threshold_mw']:.1f} MW, "
+                       f"MAE {info['rolling_mae_mw']:.1f} > {info.get('mae_threshold_mw') or 0:.1f} "
                        f"(누적 {info['breach_streak_days']}일째) but cooldown ({remaining}d left after retrain at "
                        f"{state.last_retrain['as_of']}, as_of={as_of})")
         return {"status": "cooldown", "cooldown_days_left": remaining, **info}
 
     state.consecutive_breaches += 1
     if state.consecutive_breaches < CONSECUTIVE_REQUIRED:
-        logger.warning(f"[WATCH] rolling RMSE {info['rolling_rmse_mw']:.1f} MW > {info['threshold_mw']:.1f} MW "
+        logger.warning(f"[WATCH] rolling RMSE {info['rolling_rmse_mw']:.1f} MW > {info['threshold_mw']:.1f} MW, "
+                       f"MAE {info['rolling_mae_mw']:.1f} > {info.get('mae_threshold_mw') or 0:.1f} "
                        f"(누적 {info['breach_streak_days']}일째, {state.consecutive_breaches}/{CONSECUTIVE_REQUIRED}, as_of={as_of}, "
                        f"incl_special={info['rolling_rmse_incl_special_mw']:.1f})")
         return {"status": "watch", "consecutive": state.consecutive_breaches, **info}
 
     logger.warning(f"[WARN] drift detected - triggering retrain (rolling RMSE {info['rolling_rmse_mw']:.1f} MW "
-                   f"> {info['threshold_mw']:.1f} MW, 누적 {info['breach_streak_days']}일째 "
+                   f"> {info['threshold_mw']:.1f} MW and MAE {info['rolling_mae_mw']:.1f} > {info.get('mae_threshold_mw') or 0:.1f} MW, "
+                   f"누적 {info['breach_streak_days']}일째 "
                    f"(since {info['breach_streak_start']}), as_of={as_of})")
     from serving_app.train_and_register import fine_tune
 
@@ -113,12 +116,14 @@ def check_and_trigger(records: list[dict], as_of: str | None = None) -> dict:
     if result.get("promoted"):
         model_loader.invalidate_cache()
         logger.info(f"[OK] new_rmse={result['rmse']:.2f} (champion {result['champion_rmse']:.2f}, "
-                    f"{result.get('gain_pct', 0):+.1f}% > min {result.get('min_gain_pct', 0):.0f}%) - "
+                    f"{result.get('gain_pct', 0):+.1f}% > min {result.get('min_gain_pct', 0):.0f}%), "
+                    f"mae {result.get('mae', 0):.2f} < {result.get('champion_mae', 0):.2f} - "
                     f"production promoted: JejuGapPredictor v{result['version']}")
     elif "rmse" in result:
-        logger.info(f"[INFO] gate failed: candidate {result['rmse']:.2f} vs champion {result['champion_rmse']:.2f} MW "
-                    f"({result.get('gain_pct', 0):+.1f}%, min {result.get('min_gain_pct', 0):.0f}%, n_val={result['n_val']}) "
-                    f"- keeping current champion")
+        logger.info(f"[INFO] gate failed: candidate rmse {result['rmse']:.2f} vs champion {result['champion_rmse']:.2f} MW "
+                    f"({result.get('gain_pct', 0):+.1f}%, min {result.get('min_gain_pct', 0):.0f}%), "
+                    f"mae {result.get('mae', 0):.2f} vs {result.get('champion_mae', 0):.2f} "
+                    f"[{result.get('gate_detail', '')}] n_val={result['n_val']} - keeping current champion")
     else:
         logger.info(f"[INFO] retrain held: {result.get('status')}")
     return {"status": "retrain_triggered", "promoted": bool(result.get("promoted")),

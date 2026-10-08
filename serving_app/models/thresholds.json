@@ -3,6 +3,7 @@
   "direction_over_mw": -7.831,
   "drift_window": 21,
   "drift_rmse_threshold_mw": 46.14199843131782,
+  "drift_mae_threshold_mw": 36.79150416846502,
   "basis": {
     "period": [
       "2024-01-01",
@@ -11,6 +12,8 @@
     "model": "lstm",
     "rolling_rmse_p50": 28.11318915241781,
     "rolling_rmse_p95": 46.14199843131782,
+    "rolling_mae_p50": 22.432745173945314,
+    "rolling_mae_p95": 36.79150416846502,
     "rolling_rmse_max": 60.73466416758805,
     "rolling_rmse_p95_including_special": 52.394318722081245,
     "special_days_excluded": 33
