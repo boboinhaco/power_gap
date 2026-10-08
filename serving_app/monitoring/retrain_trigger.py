@@ -112,11 +112,13 @@ def check_and_trigger(records: list[dict], as_of: str | None = None) -> dict:
 
     if result.get("promoted"):
         model_loader.invalidate_cache()
-        logger.info(f"[OK] new_rmse={result['rmse']:.2f} (champion {result['champion_rmse']:.2f}) - "
+        logger.info(f"[OK] new_rmse={result['rmse']:.2f} (champion {result['champion_rmse']:.2f}, "
+                    f"{result.get('gain_pct', 0):+.1f}% > min {result.get('min_gain_pct', 0):.0f}%) - "
                     f"production promoted: JejuGapPredictor v{result['version']}")
     elif "rmse" in result:
-        logger.info(f"[INFO] gate failed: candidate {result['rmse']:.2f} >= champion {result['champion_rmse']:.2f} MW "
-                    f"(n_val={result['n_val']}) - keeping current champion")
+        logger.info(f"[INFO] gate failed: candidate {result['rmse']:.2f} vs champion {result['champion_rmse']:.2f} MW "
+                    f"({result.get('gain_pct', 0):+.1f}%, min {result.get('min_gain_pct', 0):.0f}%, n_val={result['n_val']}) "
+                    f"- keeping current champion")
     else:
         logger.info(f"[INFO] retrain held: {result.get('status')}")
     return {"status": "retrain_triggered", "promoted": bool(result.get("promoted")),
