@@ -90,17 +90,18 @@ python scripts/simulate_drift.py --url http://localhost:8077 --start 2025-09-01 
 | 항목 | 값 | 근거 |
 |---|---|---|
 | 품질 지표 | 최근 **21건** 확정 실적의 롤링 RMSE (MW) | 영업일 기준 한 달. 특수일(연휴 ±1일)은 창에서 제외, 포함값도 로그에 기록 |
-| 드리프트 임계값 | **46.1 MW** | 정상이었던 2024년에서 같은 방식으로 잰 롤링 RMSE의 95분위 (특수일 33일 제외). `serving_app/models/thresholds.json` |
-| 드리프트 점수 | 롤링 RMSE ÷ 46.1 | 1 초과 = 드리프트. 정확도가 아님 |
+| 드리프트 임계값 | RMSE **46.1 MW** 그리고 MAE **36.8 MW** | 정상이었던 2024년에서 같은 방식으로 잰 롤링 RMSE·MAE의 95분위 (특수일 33일 제외). `serving_app/models/thresholds.json`, `scripts/recompute_thresholds.py` |
+| 드리프트 판정 규칙 | **RMSE와 MAE가 둘 다** 각자 임계값 초과 (`DRIFT_RULE=rmse+mae`, 기본) | RMSE는 하루 큰 오차(노이즈)에 끌려가므로, 이상치에 둔감한 MAE까지 넘을 때만 진짜 악화로 본다. `DRIFT_RULE=rmse`면 예전처럼 RMSE 하나 |
+| 드리프트 점수 | 롤링 RMSE ÷ 46.1 | 1 초과 = RMSE 기준 초과. 정확도가 아님 |
 | 재학습 조건 | **2일 연속** 초과 | 1일째 `[WATCH]`, 2일째 `[WARN]`. 하루 튄 것으로는 재학습하지 않음 |
 | 쿨다운 | 재학습 후 **14일** | 승격/차단 무관. 새 모델이 자리 잡기 전 연쇄 재학습 방지 |
 | Fine-tuning | 최근 60행 = 학습 `[D-60, D-15]` 46일 + 검증 `[D-14, D-1]` | champion 가중치에서 이어 학습(lr 1e-4, 10 epoch). 이력이 짧으면 `data/jeju_gap.csv`에서 백필 |
-| 재학습 게이트 | 같은 검증 14일에서 **후보 RMSE < champion RMSE**, 개선폭 > `GATE_MIN_GAIN_PCT`(기본 0) | 통과 시 alias 이동 + 서빙 캐시 무효화. 실패 시 `[INFO] gate failed`, 기존 유지. 드리프트 선언과 승격은 별개 조건이라 드리프트가 떠도 후보가 더 낫지 않으면 교체하지 않음. 14일 표본 잡음을 걸러내려면 `GATE_MIN_GAIN_PCT=3`처럼 최소 개선폭을 둔다 |
-| 초기 배포 게이트 | 검증 RMSE < naive 3개(zero / train_mean / persistence) 중 최저 | 31.2 < 33.7 MW 통과 |
+| 재학습 게이트 | 같은 검증 14일에서 **후보 RMSE < champion RMSE**(개선폭 > `GATE_MIN_GAIN_PCT`, 기본 0) **그리고 후보 MAE < champion MAE** | 통과 시 alias 이동 + 서빙 캐시 무효화. 실패 시 `[INFO] gate failed`, 기존 유지. 드리프트 선언과 승격은 별개 조건이라 드리프트가 떠도 후보가 더 낫지 않으면 교체하지 않음. 14일 표본 잡음을 걸러내려면 `GATE_MIN_GAIN_PCT=3`처럼 최소 개선폭을 둔다 |
+| 초기 배포 게이트 | 검증 RMSE < naive 3개(zero / train_mean / persistence) 중 최저 **그리고** 검증 MAE < naive 중 최저 MAE | RMSE 31.2 < 33.7, MAE 24.3 < 25.8 MW 통과 |
 | 보조 지표 | MAE · WAPE · Bias | 판정은 RMSE 하나. WAPE = Σ\|실제−예측\| ÷ Σ\|실제\|(naive = 1.00, "KPX 오차 중 남은 비율"), Bias = 치우침. 대시보드와 `GET /metrics/validation`에 표시 |
 | 방향 라벨 | under ≤ −33.9 / over ≥ −7.8 MW | 2024년 갭 분포 3등분 경계. 갭이 구조적으로 음수라 0을 경계로 쓰면 라벨이 무의미 |
 
-로그 한 바퀴: `[WATCH] rolling RMSE 46.2 > 46.1 (누적 1일째)` → `[WARN] drift detected - triggering retrain` → `[INFO] retrain triggered (train=…, val=…, rows=46+14)` → `[OK] new_rmse=50.0 (champion 50.1) - production promoted: v2`
+로그 한 바퀴: `[WATCH] rolling RMSE 46.2 > 46.1, MAE 38.8 > 36.8 (누적 1일째)` → `[WARN] drift detected - triggering retrain` → `[INFO] retrain triggered (train=…, val=…, rows=46+14)` → `[OK] new_rmse=50.0 (champion 50.1, +0.2% > min 0%), mae 40.9 < 41.2 - production promoted: v2`. 게이트 실패는 `[INFO] gate failed: … [rmse ok / mae x] - keeping current champion`
 
 ---
 

@@ -64,6 +64,8 @@ def metrics_summary(window: int = 300):
         "drift": None if not drift else {
             "rolling_rmse_mw": drift.get("rolling_rmse_mw"), "threshold_mw": th,
             "rolling_mae_mw": drift.get("rolling_mae_mw"), "rolling_wape": drift.get("rolling_wape"),
+            "mae_threshold_mw": drift.get("mae_threshold_mw"), "rule": drift.get("rule"),
+            "breach_rmse": drift.get("breach_rmse"), "breach_mae": drift.get("breach_mae"),
             "rolling_bias_mw": drift.get("rolling_bias_mw"),
             "ratio": (drift.get("rolling_rmse_mw") or 0) / th if th else None,
             "breach": drift.get("breach"), "ready": drift.get("ready"), "n_records": drift.get("n_records"),

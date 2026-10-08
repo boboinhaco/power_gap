@@ -27,7 +27,7 @@ from tensorflow import keras
 
 from data.features import (GapScaler, build_sequences, load_rows, rows_between,
                            TRAIN_START, TRAIN_END, VAL_START, VAL_END)
-from data.metrics import rmse
+from data.metrics import mae, rmse
 from data.storage import latest_upload
 from serving_app.evaluation import (compute_thresholds, format_table, gate_check, lstm_predict_fn,
                                     save_thresholds, walkforward)
@@ -101,8 +101,9 @@ def train_and_register(csv_path: str | None = None) -> dict:
             note = "passed" if gate["passed"] else "override"
             result["version"] = _promote(run.info.run_id, note)
             result["promoted"] = True
-            print(f"[GATE {'PASSED' if gate['passed'] else 'OVERRIDE'}] lstm={gate['candidate_rmse']:.1f} vs naive[{gate['reference']}]="
-                  f"{gate['reference_rmse']:.1f} MW -> {MODEL_NAME} v{result['version']} = {ALIAS}")
+            print(f"[GATE {'PASSED' if gate['passed'] else 'OVERRIDE'}] rmse lstm={gate['candidate_rmse']:.1f} vs naive[{gate['reference']}]="
+                  f"{gate['reference_rmse']:.1f} MW, mae {gate['candidate_mae']:.1f} vs naive[{gate['mae_reference']}]={gate['reference_mae']:.1f} MW "
+                  f"-> {MODEL_NAME} v{result['version']} = {ALIAS}")
         else:
             print(f"[GATE FAILED] lstm={gate['candidate_rmse']:.1f} >= naive[{gate['reference']}]={gate['reference_rmse']:.1f} MW "
                   f"-> 승격 차단 (GATE_OVERRIDE=1 로 시연용 강제 승격 가능)")
@@ -133,7 +134,8 @@ def fine_tune(rows: list[dict], as_of: str) -> dict:
     y_train_scaled = np.array([scaler.scale_gap(v) for v in y], dtype="float32")
 
     champion = mlflow.tensorflow.load_model(f"models:/{MODEL_NAME}@{ALIAS}")
-    champ_rmse = rmse(yv, lstm_predict_fn(champion, scaler)(Xv))
+    champ_pred = lstm_predict_fn(champion, scaler)(Xv)
+    champ_rmse, champ_mae = rmse(yv, champ_pred), mae(yv, champ_pred)
     champion.compile(optimizer=keras.optimizers.Adam(learning_rate=FINE_TUNE_LR), loss="mse")
 
     with mlflow.start_run(run_name="fine-tune") as run:
@@ -145,12 +147,19 @@ def fine_tune(rows: list[dict], as_of: str) -> dict:
         mlflow.log_metric("rmse", cand_rmse); mlflow.log_metric("champion_rmse", champ_rmse)
         mlflow.log_metric("gain_pct", gain_pct); mlflow.log_param("min_gain_pct", FT_MIN_GAIN_PCT)
         mlflow.tensorflow.log_model(champion, name="model", input_example=X_train[:1])
+        pass_rmse = cand_rmse < champ_rmse and gain_pct > FT_MIN_GAIN_PCT
+        pass_mae = cand_mae < champ_mae
         result.update({"run_id": run.info.run_id, "rmse": cand_rmse, "champion_rmse": champ_rmse,
+                       "mae": cand_mae, "champion_mae": champ_mae,
                        "gain_pct": gain_pct, "min_gain_pct": FT_MIN_GAIN_PCT,
+                       "pass_rmse": pass_rmse, "pass_mae": pass_mae,
+                       "gate_detail": f"rmse {'ok' if pass_rmse else 'x'} / mae {'ok' if pass_mae else 'x'}",
                        "n_val": len(yv), "n_train_rows": len(train_rows)})
-        # 게이트: 같은 검증 14일에서 후보가 champion보다 FT_MIN_GAIN_PCT 넘게 좋아야 승격 (0이면 단순 '더 낮으면')
-        if cand_rmse < champ_rmse and gain_pct > FT_MIN_GAIN_PCT:
-            result["version"] = _promote(run.info.run_id, f"fine-tune {cand_rmse:.1f}<{champ_rmse:.1f} ({gain_pct:+.1f}%)")
+        # 복합 게이트: 같은 검증 14일에서 RMSE(개선폭 > FT_MIN_GAIN_PCT)와 MAE가 **둘 다** champion보다 낮아야 승격.
+        # RMSE 하나는 하루 큰 오차에 끌려갈 수 있으므로, 이상치에 둔감한 MAE로 한 번 더 확인한다.
+        if pass_rmse and pass_mae:
+            result["version"] = _promote(run.info.run_id,
+                                         f"fine-tune rmse {cand_rmse:.1f}<{champ_rmse:.1f} ({gain_pct:+.1f}%), mae {cand_mae:.1f}<{champ_mae:.1f}")
             result["promoted"] = True
             result["status"] = "promoted"
         else:
