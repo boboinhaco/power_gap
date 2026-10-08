@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>부록 — 질의응답 정리</title>
+<meta name="viewport" content="width=1920">
+<style>
+  :root {
+    --bg: #F8F6EE;          /* 본문 슬라이드 배경 (앞 장과 통일) */
+    --ink: #1F2A10;         /* 제목 */
+    --ink-2: #4A5323;       /* 본문 */
+    --muted: #7A7F6A;       /* 보조 */
+    --olive: #788417;
+    --lime: #AAB026;
+    --cream: #F6F1BC;
+    --sand: #FDCB7B;
+    --amber: #EEA64B;
+    --rust: #D9641F;
+    --line: #E6E3C0;
+    --card: #FFFFFF;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #D9D7CC; font-family: -apple-system, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", Helvetica, sans-serif; color: var(--ink-2); }
+  .deck { display: flex; flex-direction: column; gap: 0; }
+
+  /* ---- 슬라이드 공통 (16:9, 1920×1080) ---- */
+  .slide { width: 1920px; height: 1080px; background: var(--bg); position: relative; padding: 72px 110px 60px; overflow: hidden; }
+  .kicker { display: flex; align-items: baseline; gap: 18px; color: var(--olive); font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+  .kicker .no { font-size: 20px; }
+  h1 { margin: 14px 0 10px; font-size: 56px; line-height: 1.15; font-weight: 800; color: var(--ink); letter-spacing: -0.5px; }
+  .sub { margin: 0 0 40px; font-size: 24px; color: var(--muted); font-weight: 500; }
+  .foot { position: absolute; left: 110px; right: 110px; bottom: 44px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; color: var(--muted); }
+  .foot .pg { font-weight: 700; color: var(--olive); }
+
+  /* ---- 레이아웃 ---- */
+  .grid { display: grid; gap: 28px; }
+  .g-2 { grid-template-columns: 1fr 1fr; }
+  .g-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .g-21 { grid-template-columns: 1.25fr 1fr; }
+  .g-12 { grid-template-columns: 1fr 1.35fr; }
+  .card { background: var(--card); border: 1.5px solid var(--line); border-radius: 18px; padding: 30px 34px; }
+  .card h3 { margin: 0 0 14px; font-size: 24px; color: var(--ink); font-weight: 800; }
+  .card p, .card li { font-size: 21px; line-height: 1.55; margin: 0; }
+  .card ul { margin: 0; padding-left: 24px; }
+  .card li + li { margin-top: 8px; }
+  .stat { background: var(--cream); border-radius: 16px; padding: 24px 28px; }
+  .stat .l { font-size: 17px; color: var(--olive); font-weight: 700; letter-spacing: .5px; }
+  .stat .v { font-size: 46px; font-weight: 800; color: var(--ink); margin: 4px 0 2px; letter-spacing: -1px; }
+  .stat .d { font-size: 18px; color: var(--ink-2); line-height: 1.45; }
+  .stat.warn { background: #FDF0DC; }
+  .stat.alert { background: #FDE9DC; }
+  .tag { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 16px; font-weight: 700; background: var(--cream); color: var(--olive); }
+  .tag.ok { background: #EEF3D6; color: #5B6412; }
+  .tag.warn { background: #FDF0DC; color: #B4650E; }
+  .tag.err { background: #FDE9DC; color: var(--rust); }
+  .note { margin-top: 26px; font-size: 19px; color: var(--muted); line-height: 1.5; }
+  .bar { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--olive); }
+  .mono { font-family: Menlo, "SF Mono", monospace; font-size: 18px; color: var(--ink-2); background: var(--cream); border-radius: 10px; padding: 14px 18px; line-height: 1.6; white-space: pre-wrap; }
+  .flow { display: flex; align-items: stretch; gap: 14px; }
+  .flow .step { flex: 1; background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 22px 22px; }
+  .flow .step .n { font-size: 15px; color: var(--olive); font-weight: 800; letter-spacing: 1px; }
+  .flow .step .t { font-size: 22px; font-weight: 800; color: var(--ink); margin: 6px 0 8px; }
+  .flow .step .s { font-size: 18px; line-height: 1.45; color: var(--ink-2); }
+  .flow .arr { align-self: center; font-size: 30px; color: var(--olive); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 20px; }
+  th { background: var(--cream); color: #5B6412; font-weight: 700; text-align: left; padding: 12px 16px; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.45; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.hi td { background: #FDF0DC; font-weight: 700; }
+  .big-ex { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 22px; }
+  .big-ex .box { background: var(--card); border: 1.5px solid var(--line); border-radius: 18px; padding: 26px 28px; text-align: center; }
+  .big-ex .box .l { font-size: 18px; color: var(--muted); font-weight: 600; }
+  .big-ex .box .v { font-size: 54px; font-weight: 800; color: var(--ink); letter-spacing: -1px; }
+  .big-ex .box .d { font-size: 17px; color: var(--ink-2); }
+  .big-ex .op { font-size: 44px; color: var(--olive); font-weight: 800; }
+  img.ev { width: 100%; border-radius: 14px; border: 1.5px solid var(--line); background: #fff; }
+  .timeline { position: relative; height: 150px; margin-top: 14px; }
+  .timeline .track { position: absolute; left: 0; right: 0; top: 64px; height: 18px; border-radius: 999px; background: #E7E4CF; }
+  .timeline .red { position: absolute; top: 64px; height: 18px; background: var(--rust); border-radius: 999px; }
+  .timeline .tick { position: absolute; top: 0; font-size: 17px; color: var(--ink-2); text-align: center; transform: translateX(-50%); width: 160px; line-height: 1.3; }
+  .timeline .tick b { display: block; font-size: 18px; color: var(--ink); }
+  .timeline .tick::after { content: ""; position: absolute; left: 50%; top: 52px; width: 2px; height: 30px; background: var(--ink-2); }
+  .timeline .tick.below { top: 112px; }
+  .timeline .tick.below::after { top: -24px; height: 22px; }
+  .timeline .tick[style*="transform:none"]::after { left: 0; }
+  .timeline .tick[style*="translateX(-100%)"]::after { left: auto; right: 0; }
+  .timeline .lab { position: absolute; top: 96px; font-size: 17px; color: var(--muted); transform: translateX(-50%); width: 200px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ===================================================== 14 ===== -->
+<section class="slide" id="p14">
+  <div class="kicker"><span class="no">14</span><span>부록</span></div>
+  <h1>60MW 이상 오차일 감소 근거</h1>
+  <p class="sub">2025년 하반기 184일 · 공식 예측 그대로 39일, LSTM 보정 후 19일</p>
+  <div class="grid g-12">
+    <div>
+      <div class="stat alert"><div class="l">60 MW 이상 빗나간 날</div><div class="v">39일 → 19일</div><div class="d">51% 감소 · 운영자가 예비력을 급히 더 확보하거나 준비한 자원을 놀려야 했던 날이 절반으로</div></div>
+      <div class="grid g-2" style="margin-top:18px;">
+        <div class="stat"><div class="l">40 MW 이상</div><div class="v">76 → 45일</div><div class="d">−41%</div></div>
+        <div class="stat"><div class="l">그 날들의 평균 오차</div><div class="v">69 → 44 MW</div><div class="d">−36% · 방향 적중 87%</div></div>
+      </div>
+      <div class="card" style="margin-top:18px;">
+        <h3>읽는 법</h3>
+        <ul>
+          <li>주황 막대는 공식 예측을 그대로 썼을 때의 오차, 초록 막대는 LSTM 보정 후 남은 오차</li>
+          <li>점선이 60 MW 기준선. 점선을 넘는 막대 수가 39개에서 19개로 줄었다</li>
+          <li>사후 예측 검증 결과이며 예비력·비용 절감 실적이 아니다</li>
+        </ul>
+      </div>
+    </div>
+    <div><img class="ev" src="screenshots/10_근거_60MW이상_빗나간날_39to19.png" alt="60MW 이상 오차일 전후 비교"></div>
+  </div>
+  <div class="foot"><span>출처: 2025년 하반기 walk-forward 평가 · docs/eval_2025-07-01_2025-12-31.json</span><span class="pg">14</span></div>
+</section>
+
+<!-- ===================================================== 15 ===== -->
+<section class="slide" id="p15">
+  <div class="kicker"><span class="no">15</span><span>부록</span></div>
+  <h1>10월 4일 대표 사례 근거</h1>
+  <p class="sub">2025년 10월 4일 · KPX 699.0 MW, 실제 816.3 MW · 공식 예측 오차 117.3 MW → 보정 후 잔여 오차 41.9 MW</p>
+  <div class="grid g-3" style="margin-bottom:22px;">
+    <div class="stat warn"><div class="l">2025-10-04 (토, 추석 연휴)</div><div class="v">117 → 42 MW</div><div class="d">전날 저녁 LSTM이 −75 예고 · 보정 수요 774 · 오차 64% 제거</div></div>
+    <div class="stat"><div class="l">가장 큰 고점 2025-10-03 (개천절)</div><div class="v">−149.6 MW</div><div class="d">급변 첫날은 놓침(+31 예측) · 둘째 날 10-04부터 포착</div></div>
+    <div class="stat"><div class="l">양수 최대 2025-08-11</div><div class="v">+126.5 MW</div><div class="d">KPX 1071.5 과대 → 실제 945 · LSTM +42 예고, 33% 제거</div></div>
+  </div>
+  <table>
+    <tr><th>날짜</th><th class="num">KPX 예측</th><th class="num">실제 수요</th><th class="num">실제 갭</th><th class="num">LSTM 예측 갭</th><th class="num">보정 수요</th><th class="num">남은 오차</th><th class="num">오차 제거</th></tr>
+    <tr class="hi"><td>2025-10-04</td><td class="num">699.0</td><td class="num">816.3</td><td class="num">−117.3</td><td class="num">−75.3</td><td class="num">774.3</td><td class="num">−41.9</td><td class="num">64%</td></tr>
+    <tr><td>2025-10-05</td><td class="num">680.8</td><td class="num">798.3</td><td class="num">−117.5</td><td class="num">−71.3</td><td class="num">752.0</td><td class="num">−46.2</td><td class="num">61%</td></tr>
+    <tr><td>2025-10-13</td><td class="num">785.0</td><td class="num">892.8</td><td class="num">−107.8</td><td class="num">−47.9</td><td class="num">832.9</td><td class="num">−59.9</td><td class="num">44%</td></tr>
+    <tr><td>2025-07-01</td><td class="num">912.2</td><td class="num">1020.7</td><td class="num">−108.4</td><td class="num">−42.3</td><td class="num">954.6</td><td class="num">−66.1</td><td class="num">39%</td></tr>
+    <tr><td>2025-08-11</td><td class="num">1071.5</td><td class="num">945.0</td><td class="num">+126.5</td><td class="num">+42.0</td><td class="num">1029.5</td><td class="num">+84.4</td><td class="num">33%</td></tr>
+    <tr><td>2025-10-03</td><td class="num">698.0</td><td class="num">847.6</td><td class="num">−149.6</td><td class="num">+31.5</td><td class="num">666.5</td><td class="num">−181.1</td><td class="num">−21%</td></tr>
+  </table>
+  <p class="note">갭 음수 = 실제 수요가 예측보다 큼(과소예측) · 보정 수요 = KPX 예측 − LSTM 예측 갭 · 오차 제거 = 1 − |남은 오차| ÷ |실제 갭| · 10월 4일은 대표 사례이며 모든 날에 같은 개선이 일어난 것은 아니다</p>
+  <div class="foot"><span>출처: 2025년 walk-forward 평가 · docs/eval_2025-*.json + data/jeju_gap.csv</span><span class="pg">15</span></div>
+</section>
+
+<!-- ===================================================== 16 ===== -->
+<section class="slide" id="p16">
+  <div class="kicker"><span class="no">16</span><span>부록 · 질의응답</span></div>
+  <h1>쉬운 말로 — MW와 오차가 뜻하는 것</h1>
+  <p class="sub">MW는 "그 시간에 쓰이는 전기의 양". 숫자 하나가 운영자에게 무엇을 뜻하는지 10월 4일로 설명</p>
+  <div class="big-ex" style="margin-bottom:26px;">
+    <div class="box"><div class="l">전력거래소 예측</div><div class="v">699</div><div class="d">내일 저녁 이만큼 쓰일 것</div></div>
+    <div class="op">vs</div>
+    <div class="box"><div class="l">실제 수요</div><div class="v">816</div><div class="d">실제로 쓰인 양</div></div>
+    <div class="op">=</div>
+    <div class="box" style="background:#FDE9DC;border-color:#F0B48A;"><div class="l">부족</div><div class="v">117 MW</div><div class="d">제주 저녁 수요의 약 14%</div></div>
+  </div>
+  <div class="grid g-3">
+    <div class="card"><h3>운영자에게 117 MW란</h3><p>준비한 것보다 14% 더 필요했다는 뜻. 그날 저녁 급하게 발전기를 더 돌리거나 다른 곳에서 전기를 끌어와야 한다. 반대로 예측이 너무 높으면 준비한 발전기가 논다. 어느 쪽이든 비용이다.</p></div>
+    <div class="card"><h3>우리 모델이 한 일</h3><p>전날 저녁에 "내일 75 MW쯤 모자랄 것"이라고 알려줬다. 그 말대로 774로 준비했다면 모자라는 양은 117이 아니라 42가 된다. <b>모르고 대비해야 하는 양이 1/3로 줄었다.</b></p></div>
+    <div class="card"><h3>흔한 오해</h3><ul><li>오차를 0으로 만드는 서비스가 아니다. "얼마나, 어느 쪽으로 틀릴지"를 하루 먼저 알려준다</li><li>남은 오차 42는 우리가 못 잡은 양. 이득은 117 − 42 = 75</li><li>2024~2025년 731일 중 74.6%가 실제가 예측보다 많았다(과소예측)</li></ul></div>
+  </div>
+  <div class="foot"><span>근거: data/jeju_gap.csv 2025-10-04 · docs/eval_2025-07-01_2025-12-31.json</span><span class="pg">16</span></div>
+</section>
+
+<!-- ===================================================== 17 ===== -->
+<section class="slide" id="p17">
+  <div class="kicker"><span class="no">17</span><span>부록 · 질의응답</span></div>
+  <h1>드리프트 기준 46.1 MW는 어떻게 정했나</h1>
+  <p class="sub">손으로 정한 숫자가 아니라, 모델이 정상이던 2024년의 오차 분포에서 계산한 값</p>
+  <div class="grid g-21">
+    <div>
+      <div class="flow">
+        <div class="step"><div class="n">STEP 01</div><div class="t">정상 구간 선택</div><div class="s">모델을 학습한 2024년 366일. 이 기간은 모델이 "잘 맞던 상태"</div></div>
+        <div class="arr">→</div>
+        <div class="step"><div class="n">STEP 02</div><div class="t">서빙과 같은 방식으로 측정</div><div class="s">최근 21건씩 묶어 롤링 RMSE를 하루씩 밀며 계산. 명절·연휴 ±1일(33일)은 제외</div></div>
+        <div class="arr">→</div>
+        <div class="step"><div class="n">STEP 03</div><div class="t">상위 5% 지점</div><div class="s">값들을 줄 세워 95분위를 기준으로. "정상일 때도 스무 날에 하루는 넘던 선"</div></div>
+      </div>
+      <div class="card" style="margin-top:24px;">
+        <h3>왜 95분위인가</h3>
+        <ul>
+          <li>중앙값(28 MW)으로 잡으면 정상일 때도 절반이 경보 → 아무도 안 믿는다</li>
+          <li>최대값(61 MW)으로 잡으면 진짜 나빠져도 못 잡는다</li>
+          <li>95%는 "오경보는 5% 이하, 악화는 놓치지 않게"의 절충. 여기에 2일 연속 조건을 더해 하루짜리 오경보를 한 번 더 거른다</li>
+          <li>특수일을 포함하면 95분위가 52.4로 올라가 기준이 느슨해지므로 제외. 기준을 만들 때와 쓸 때 같은 규칙</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="stat"><div class="l">2024년 롤링 RMSE 분포 (특수일 제외)</div>
+        <div style="margin-top:10px;font-size:19px;">중앙값 28.1 MW</div><div class="bar" style="margin:6px 0 14px;"><i style="width:46%"></i></div>
+        <div style="font-size:19px;"><b>95분위 46.1 MW ← 기준</b></div><div class="bar" style="margin:6px 0 14px;"><i style="width:76%;background:var(--rust)"></i></div>
+        <div style="font-size:19px;">최대 60.7 MW</div><div class="bar" style="margin:6px 0 0;"><i style="width:100%;background:var(--amber)"></i></div>
+      </div>
+      <div class="stat" style="margin-top:18px;"><div class="l">같은 방법으로 뽑은 MAE 기준</div><div class="v">36.8 MW</div><div class="d">RMSE와 MAE가 둘 다 넘어야 드리프트 (18쪽)</div></div>
+      <div class="card" style="margin-top:18px;"><h3>솔직한 한계</h3><p>46.1은 "통계적으로 평소와 다르다"는 선이지 "운영자가 감당 못 하는 오차"라는 업무 기준이 아니다. 현장 허용치와 맞추는 것은 다음 단계. 재학습으로 모델이 바뀌면 기준도 다시 계산된다.</p></div>
+    </div>
+  </div>
+  <div class="foot"><span>근거: serving_app/evaluation.py compute_thresholds · serving_app/models/thresholds.json · scripts/recompute_thresholds.py</span><span class="pg">17</span></div>
+</section>
+
+<!-- ===================================================== 18 ===== -->
+<section class="slide" id="p18">
+  <div class="kicker"><span class="no">18</span><span>부록 · 질의응답</span></div>
+  <h1>판정 규칙 — 노이즈를 거르는 세 겹</h1>
+  <p class="sub">"RMSE 하나만 보면 안 된다"에 대한 답: 지표 두 개, 시간 조건, 쉬는 기간</p>
+  <div class="grid g-3" style="margin-bottom:22px;">
+    <div class="card"><h3><span class="tag ok">1겹</span>&nbsp; RMSE + MAE 둘 다</h3><p>RMSE는 오차를 제곱해 하루 큰 오차 하나에 끌려간다. MAE는 평균이라 둔감하다. <b>둘 다 각자의 95분위를 넘을 때만</b> 드리프트로 본다. 하나만 넘으면 "하루짜리 사건".</p></div>
+    <div class="card"><h3><span class="tag warn">2겹</span>&nbsp; 2일 연속</h3><p>하루 넘으면 WATCH(관찰), <b>이틀 연속</b> 넘어야 WARN(드리프트 선언). 1겹이 "한 날이 끌어올렸나"를 보고, 2겹은 "계속되는가"를 본다. 서로 다른 축.</p></div>
+    <div class="card"><h3><span class="tag err">3겹</span>&nbsp; 14일 쿨다운</h3><p>재학습 뒤 14일은 다시 돌지 않는다. 새 모델이 자리 잡기 전 연쇄 재학습을 막고, 다음 시험지 14일이 이번 시험지와 겹치지 않게 한다.</p></div>
+  </div>
+  <div class="grid g-12">
+    <div>
+      <table>
+        <tr><th>실제로 돌려 본 상황</th><th class="num">롤링 RMSE</th><th class="num">롤링 MAE</th><th>판정</th></tr>
+        <tr><td>하루만 230 MW 튐 (태풍·명절 같은 일회성)</td><td class="num">53.4 <span class="tag err">초과</span></td><td class="num">24.8 <span class="tag ok">정상</span></td><td><b>드리프트 아님</b></td></tr>
+        <tr><td>매일 55 MW씩 꾸준히 틀림 (진짜 악화)</td><td class="num">54.4 <span class="tag err">초과</span></td><td class="num">53.5 <span class="tag err">초과</span></td><td><b>드리프트</b></td></tr>
+        <tr><td>2025-09-27 ~ 10-14 (추석 구간, 시연)</td><td class="num">46.2 ~ 55.5</td><td class="num">38.8 ~ 48.4</td><td>18일 모두 둘 다 초과 → 진짜 악화</td></tr>
+      </table>
+      <p class="note">기준: RMSE 46.1 / MAE 36.8 MW (2024년 95분위). 규칙은 <span class="mono" style="padding:2px 8px;font-size:17px;">DRIFT_RULE=rmse+mae</span>, 예전처럼 RMSE 하나만 쓰려면 <span class="mono" style="padding:2px 8px;font-size:17px;">rmse</span></p>
+    </div>
+    <div class="mono">[WATCH] rolling RMSE 46.2 > 46.1, MAE 38.8 > 36.8 (누적 1일째, 1/2, as_of=2025-09-27)
+[WARN]  drift detected - triggering retrain (rolling RMSE 48.0 > 46.1 and MAE 40.9 > 36.8, 누적 2일째)
+[INFO]  retrain triggered (train=2025-07-30~09-13, val=2025-09-14~09-27, rows=46+14)
+[OK]    new_rmse=50.03 (champion 50.14, +0.2%), mae 40.9 < 41.2 - promoted: v2
+[WATCH] rolling RMSE 51.0 > 46.1 ... but cooldown (13d left after retrain at 2025-09-28)</div>
+  </div>
+  <div class="foot"><span>근거: serving_app/monitoring/drift_detector.py (WINDOW_SIZE 21, CONSECUTIVE_REQUIRED 2, DRIFT_RULE) · retrain_trigger.py (COOLDOWN_DAYS 14)</span><span class="pg">18</span></div>
+</section>
+
+<!-- ===================================================== 19 ===== -->
+<section class="slide" id="p19">
+  <div class="kicker"><span class="no">19</span><span>부록 · 질의응답</span></div>
+  <h1>재학습 60일과 승격 조건</h1>
+  <p class="sub">60일은 승격 점수가 아니라 다시 배우는 기간. 새 모델은 같은 시험지에서 지금 모델을 두 지표 모두 이겨야 교체</p>
+  <div class="grid g-2" style="margin-bottom:22px;">
+    <div class="card">
+      <h3>60일의 구조</h3>
+      <div class="mono" style="margin-bottom:14px;">D-60 ─────────────── D-15 │ D-14 ──────── D-1 │ D(오늘)
+        학습 46일           │    시험 14일     │</div>
+      <ul>
+        <li><b>시험 14일</b>은 쿨다운 14일과 맞췄다. 다음 재학습이 빨라야 D+14이므로 시험지 [D-14, D-1]과 [D, D+13]이 겹치지 않는다. 같은 날짜로 두 번 채점하지 않기 위해서</li>
+        <li><b>학습 46일</b>은 표본 수와 최신성의 절충. 3일 창으로 자르면 43개 표본(수업 실습 41일·20개의 두 배). 너무 길면 드리프트 이전의 옛 패턴이 섞인다</li>
+        <li>실험으로 고른 값은 아니고 설계값. <span class="mono" style="padding:2px 8px;font-size:17px;">RETRAIN_ROWS</span>로 바꿀 수 있다</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>승격 게이트 (두 단계)</h3>
+      <table style="font-size:19px;">
+        <tr><th>언제</th><th>무엇과 비교</th><th>통과 조건</th></tr>
+        <tr><td>처음 배포</td><td>단순 기준 3개(공식 예측 그대로 / 평균 보정 / 어제 값) 중 최고</td><td>RMSE <b>그리고</b> MAE 둘 다 더 낮음<br><span class="tag ok">31.2 &lt; 33.7 · 24.3 &lt; 25.8 통과</span></td></tr>
+        <tr><td>운영 중 재학습</td><td>지금 운영 중인 모델(바로 앞 champion)을 <b>같은 시험 14일</b>로 다시 채점</td><td>RMSE가 최소 개선폭 이상 낮고 <b>그리고</b> MAE도 낮음. 실패 시 기존 유지</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="grid g-3">
+    <div class="stat warn"><div class="l">지적받은 약점</div><div class="v">0.2% 차이로 승격</div><div class="d">v2: 50.03 vs 50.14. 시험지 14일뿐이라 잡음일 수 있다</div></div>
+    <div class="stat"><div class="l">보완 1 · 최소 개선폭</div><div class="v">GATE_MIN_GAIN_PCT</div><div class="d">기본 0(발표 결과와 동일). 운영에서는 3%를 권장 → v2·v3 모두 차단됨</div></div>
+    <div class="stat"><div class="l">보완 2 · MAE 동시 통과</div><div class="v">rmse ok / mae ok</div><div class="d">한 지표만 우연히 좋아진 후보를 거른다. 로그에 두 결과가 같이 남는다</div></div>
+  </div>
+  <div class="foot"><span>근거: serving_app/train_and_register.py fine_tune (RETRAIN_ROWS 60, FT_VAL_DAYS 14, FT_MIN_GAIN_PCT) · evaluation.py gate_check</span><span class="pg">19</span></div>
+</section>
+
+<!-- ===================================================== 20 ===== -->
+<section class="slide" id="p20">
+  <div class="kicker"><span class="no">20</span><span>부록 · 질의응답</span></div>
+  <h1>RMSE 외 지표 — 무엇을 보고 어떻게 쓰나</h1>
+  <p class="sub">"다른 알고리즘"이 아니라 "다른 자". 예측 알고리즘은 LSTM 하나, 재는 자는 다섯 개</p>
+  <div class="grid g-12">
+    <div>
+      <table>
+        <tr><th>지표</th><th>쉬운 뜻</th><th>어디에 쓰나</th></tr>
+        <tr><td><b>RMSE</b></td><td>평균 몇 MW 틀렸나, 크게 틀린 날을 더 무겁게</td><td>드리프트 판정 1 · 게이트 1</td></tr>
+        <tr><td><b>MAE</b></td><td>그냥 평균 몇 MW 틀렸나</td><td>드리프트 판정 2 · 게이트 2 (노이즈 필터)</td></tr>
+        <tr><td><b>WAPE</b></td><td>공식 예측 오차 중 몇 %가 남았나 (공식 예측 그대로 = 1.00)</td><td>효과를 비율로 말할 때 · 화면 보조</td></tr>
+        <tr><td><b>Bias</b></td><td>한쪽으로만 틀리나 (+ 과대 쪽, − 과소 쪽)</td><td>체계적 치우침 확인 · 화면 보조</td></tr>
+        <tr><td><b>방향 적중률</b></td><td>모자랄지 남을지를 맞힌 비율</td><td>운영자 판단용</td></tr>
+      </table>
+      <p class="note">MSE는 RMSE에서 루트만 뺀 값(단위 MW²)이라 순위·판정이 같고 읽기만 어려워 넣지 않았다. 추가 후보가 있다면 P90 절대오차("열 번 중 아홉 번은 이 안")가 운영자에게 더 유용하다.</p>
+    </div>
+    <div>
+      <table>
+        <tr><th>2025년</th><th class="num">공식 예측 그대로</th><th class="num">LSTM 보정 후</th></tr>
+        <tr><td>RMSE 하반기</td><td class="num">49.8 MW</td><td class="num"><b>37.7 MW</b> (−24%)</td></tr>
+        <tr><td>MAE 하반기</td><td class="num">39.1 MW</td><td class="num"><b>28.5 MW</b> (−27%)</td></tr>
+        <tr><td>WAPE 하반기</td><td class="num">1.00</td><td class="num"><b>0.73</b> (27% 걷어냄)</td></tr>
+        <tr><td>Bias 하반기</td><td class="num">+17.5 MW (늘 과소 쪽)</td><td class="num"><b>+2.3 MW</b></td></tr>
+        <tr><td>P90 절대오차 하반기</td><td class="num">84.9 MW</td><td class="num"><b>59.9 MW</b></td></tr>
+        <tr><td>RMSE 상반기</td><td class="num">38.8 MW</td><td class="num"><b>31.2 MW</b> (−20%)</td></tr>
+        <tr><td>MAE 상반기</td><td class="num">30.1 MW</td><td class="num"><b>24.3 MW</b></td></tr>
+        <tr><td>Bias 상반기</td><td class="num">+19.3 MW</td><td class="num"><b>+4.1 MW</b></td></tr>
+      </table>
+      <div class="stat" style="margin-top:16px;"><div class="l">화면에서 보이는 곳</div><div class="d">검증 성능 카드 "보조 지표 MAE / WAPE / Bias" · 드리프트 카드 아래 보조 줄 · GET /metrics/validation · GET /metrics/summary</div></div>
+    </div>
+  </div>
+  <div class="foot"><span>근거: data/metrics.py (rmse·mae·wape·bias·direction_hit) · docs/eval_2025-*.json · README 4장</span><span class="pg">20</span></div>
+</section>
+
+<!-- ===================================================== 21 ===== -->
+<section class="slide" id="p21">
+  <div class="kicker"><span class="no">21</span><span>부록 · 질의응답</span></div>
+  <h1>시연 구간에서 일어난 일 — 2025-09-01 ~ 10-31</h1>
+  <p class="sub">v1에서 시작해 두 달을 하루씩 재생. 송전 링이 빨간 구간은 09-27 ~ 10-14, 18일</p>
+  <div class="card" style="padding-bottom:20px;">
+    <div class="timeline" style="height:190px;">
+      <div class="track" style="top:84px;"></div>
+      <div class="red" style="left:43.3%; width:30%; top:84px;"></div>
+      <div class="tick" style="left:0%; transform:none; text-align:left;"><b>09-01</b>재생 시작 · v1</div>
+      <div class="tick" style="left:43.3%"><b>09-27</b>첫 초과 · 링 빨강</div>
+      <div class="tick below" style="left:45%"><b>09-28</b>WARN → v2 승격</div>
+      <div class="tick" style="left:70%"><b>10-13</b>WARN → v3 승격</div>
+      <div class="tick below" style="left:73.3%"><b>10-15</b>정상 복귀 · 링 노랑</div>
+      <div class="tick" style="left:100%; transform:translateX(-100%); text-align:right;"><b>10-31</b>재생 끝 · RMSE 27.4</div>
+      <div class="lab" style="left:58%; top:164px;">추석 연휴 포함 · 18일 연속 초과 (09-27 ~ 10-14)</div>
+    </div>
+  </div>
+  <div class="grid g-3" style="margin-top:22px;">
+    <div class="stat alert"><div class="l">드리프트 선언</div><div class="v">2회</div><div class="d">09-28, 10-13 · 둘 다 RMSE·MAE 동시 초과</div></div>
+    <div class="stat"><div class="l">재학습 → 승격</div><div class="v">v1 → v2 → v3</div><div class="d">게이트 통과 2회, 차단 0회 · 사람 개입 없음</div></div>
+    <div class="stat"><div class="l">쿨다운이 막은 재학습</div><div class="v">13일치</div><div class="d">09-29 ~ 10-11 매일 초과했지만 WATCH만 기록</div></div>
+  </div>
+  <div class="card" style="margin-top:22px;">
+    <h3>시연에서 가리킬 세 순간</h3>
+    <ul>
+      <li><b>09-27</b> 가운데 섬의 송전 링이 빨갛게 바뀌고 한라산 위에 경고 말풍선이 뜬다</li>
+      <li><b>09-28</b> 오른쪽 아래 알람 카드에 WATCH → WARN → INFO → OK 네 줄이 쌓이고, 현재 운영 모델이 v2로 바뀐다</li>
+      <li><b>10-15</b> 링이 노란색으로 돌아온다. 빨간 상태로 끝내고 싶으면 재생을 10-13까지만 돌린다</li>
+    </ul>
+  </div>
+  <div class="foot"><span>근거: logs/aiops.log (as_of 2025-09-27 ~ 10-14) · GET /models/versions · 부록 13</span><span class="pg">21</span></div>
+</section>
+
+</div>
+<script>
+  // ?only=p16 처럼 열면 그 슬라이드만 보여 준다 (슬라이드별 캡처용)
+  (function(){ const q=new URLSearchParams(location.search).get("only"); if(!q) return;
+    document.querySelectorAll(".slide").forEach(s=>{ if(s.id!==q) s.style.display="none"; }); })();
+</script>
+</body>
+</html>
