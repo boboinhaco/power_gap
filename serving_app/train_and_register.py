@@ -47,6 +47,9 @@ FINE_TUNE_EPOCHS = 10
 FINE_TUNE_LR = 1e-4
 RETRAIN_ROWS = int(os.getenv("RETRAIN_ROWS", "60"))  # 재학습에 쓰는 최근 행 수 (학습 + 검증)
 FT_VAL_DAYS = 14
+# 재학습 게이트 최소 개선폭(%). 0 = 후보 RMSE가 champion보다 조금이라도 낮으면 승격(기본).
+# 14일 검증 표본의 잡음을 걸러내려면 2~5 정도로 올린다. 예: GATE_MIN_GAIN_PCT=3
+FT_MIN_GAIN_PCT = float(os.getenv("GATE_MIN_GAIN_PCT", "0"))
 FT_TRAIN_DAYS = RETRAIN_ROWS  # [D-60, D-15] 학습(46일) / [D-14, D-1] 검증(14일)
 FT_MIN_TRAIN_ROWS = RETRAIN_ROWS - FT_VAL_DAYS - 6  # 제외일 몇 개는 허용
 
@@ -138,12 +141,16 @@ def fine_tune(rows: list[dict], as_of: str) -> dict:
         cand_rmse = rmse(yv, lstm_predict_fn(champion, scaler)(Xv))
         mlflow.log_params({"mode": "fine-tune", "epochs": FINE_TUNE_EPOCHS, "as_of": as_of,
                            "train": f"{tr_s}~{tr_e}", "val": f"{va_s}~{va_e}", "n_train_rows": len(train_rows)})
+        gain_pct = (champ_rmse - cand_rmse) / champ_rmse * 100 if champ_rmse else 0.0
         mlflow.log_metric("rmse", cand_rmse); mlflow.log_metric("champion_rmse", champ_rmse)
+        mlflow.log_metric("gain_pct", gain_pct); mlflow.log_param("min_gain_pct", FT_MIN_GAIN_PCT)
         mlflow.tensorflow.log_model(champion, name="model", input_example=X_train[:1])
         result.update({"run_id": run.info.run_id, "rmse": cand_rmse, "champion_rmse": champ_rmse,
+                       "gain_pct": gain_pct, "min_gain_pct": FT_MIN_GAIN_PCT,
                        "n_val": len(yv), "n_train_rows": len(train_rows)})
-        if cand_rmse < champ_rmse:
-            result["version"] = _promote(run.info.run_id, f"fine-tune {cand_rmse:.1f}<{champ_rmse:.1f}")
+        # 게이트: 같은 검증 14일에서 후보가 champion보다 FT_MIN_GAIN_PCT 넘게 좋아야 승격 (0이면 단순 '더 낮으면')
+        if cand_rmse < champ_rmse and gain_pct > FT_MIN_GAIN_PCT:
+            result["version"] = _promote(run.info.run_id, f"fine-tune {cand_rmse:.1f}<{champ_rmse:.1f} ({gain_pct:+.1f}%)")
             result["promoted"] = True
             result["status"] = "promoted"
         else:

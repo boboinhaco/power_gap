@@ -95,7 +95,7 @@ python scripts/simulate_drift.py --url http://localhost:8077 --start 2025-09-01 
 | 재학습 조건 | **2일 연속** 초과 | 1일째 `[WATCH]`, 2일째 `[WARN]`. 하루 튄 것으로는 재학습하지 않음 |
 | 쿨다운 | 재학습 후 **14일** | 승격/차단 무관. 새 모델이 자리 잡기 전 연쇄 재학습 방지 |
 | Fine-tuning | 최근 60행 = 학습 `[D-60, D-15]` 46일 + 검증 `[D-14, D-1]` | champion 가중치에서 이어 학습(lr 1e-4, 10 epoch). 이력이 짧으면 `data/jeju_gap.csv`에서 백필 |
-| 재학습 게이트 | 같은 검증 14일에서 **후보 RMSE < champion RMSE** | 통과 시 alias 이동 + 서빙 캐시 무효화. 실패 시 `[INFO] gate failed`, 기존 유지 |
+| 재학습 게이트 | 같은 검증 14일에서 **후보 RMSE < champion RMSE**, 개선폭 > `GATE_MIN_GAIN_PCT`(기본 0) | 통과 시 alias 이동 + 서빙 캐시 무효화. 실패 시 `[INFO] gate failed`, 기존 유지. 드리프트 선언과 승격은 별개 조건이라 드리프트가 떠도 후보가 더 낫지 않으면 교체하지 않음. 14일 표본 잡음을 걸러내려면 `GATE_MIN_GAIN_PCT=3`처럼 최소 개선폭을 둔다 |
 | 초기 배포 게이트 | 검증 RMSE < naive 3개(zero / train_mean / persistence) 중 최저 | 31.2 < 33.7 MW 통과 |
 | 보조 지표 | MAE · WAPE · Bias | 판정은 RMSE 하나. WAPE = Σ\|실제−예측\| ÷ Σ\|실제\|(naive = 1.00, "KPX 오차 중 남은 비율"), Bias = 치우침. 대시보드와 `GET /metrics/validation`에 표시 |
 | 방향 라벨 | under ≤ −33.9 / over ≥ −7.8 MW | 2024년 갭 분포 3등분 경계. 갭이 구조적으로 음수라 0을 경계로 쓰면 라벨이 무의미 |
