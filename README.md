@@ -6,6 +6,19 @@
 
 <p align="center"><img src="docs/screenshots/04_재학습_후_대시보드_전체.png" width="900" alt="대시보드"></p>
 
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-Keras-FF6F00?logo=tensorflow&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![MLflow](https://img.shields.io/badge/MLflow-Registry-0194E2?logo=mlflow&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+
+| | |
+|---|---|
+| **기간 · 형태** | 2026.09 ~ 2026.10 · 4인 팀 프로젝트 (SKALA 4기) |
+| **내 역할** | PM · 대시보드 UI 설계와 구현(Dashboard/Simulation/Datasets/System 4탭, Three.js 제주 3D) · 운영 기준(드리프트 임계값, 게이트) 정리 |
+| **핵심 성과** | 60 MW 이상 빗나간 날 39일 → 19일(−51%), RMSE 49.8 → 37.7 MW(−24%) · 드리프트 → 재학습 → 게이트 → 승격 자동화 |
+| **스택** | Python · Keras LSTM · FastAPI · MLflow Registry · Docker Compose · Three.js |
+
 ---
 
 ## 1. 무엇을 하는 서비스인가
